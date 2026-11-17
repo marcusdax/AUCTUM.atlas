@@ -78,7 +78,7 @@ export interface InstallPromptProps {
 }
 
 /**
- * Dismissible "install RoofPro" card.
+ * Dismissible "install AUCTUM" card.
  *
  * Listens for Chromium's `beforeinstallprompt`, defers it and lets the user install from
  * an in-app button. Hidden when the app is already installed, when the browser never
@@ -153,14 +153,14 @@ export const InstallPrompt: React.FC<InstallPromptProps> = ({ className, showDel
       aria-describedby="roofpro-install-desc"
       className={clsx(
         'fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm rounded-xl border border-border',
-        'bg-[hsl(var(--background-elevated))] p-4 shadow-2xl shadow-black/40',
+        'bg-[hsl(var(--background))] p-4 shadow-lg',
         'pb-[calc(1rem+env(safe-area-inset-bottom))]',
         className
       )}
     >
       <div className="flex items-start gap-3">
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background-accent))] text-[hsl(var(--text-primary))]"
           aria-hidden="true"
         >
           <Smartphone size={20} />
@@ -168,10 +168,10 @@ export const InstallPrompt: React.FC<InstallPromptProps> = ({ className, showDel
 
         <div className="min-w-0 flex-1">
           <h2 id="roofpro-install-title" className="text-sm font-semibold text-text-primary">
-            Install RoofPro CRM
+            Install AUCTUM
           </h2>
           <p id="roofpro-install-desc" className="mt-1 text-sm text-text-secondary">
-            Add RoofPro to your home screen for faster access and offline-ready field work.
+            Add AUCTUM to your home screen for faster access and offline-ready field work.
           </p>
         </div>
 
@@ -207,8 +207,8 @@ export const InstallPrompt: React.FC<InstallPromptProps> = ({ className, showDel
           disabled={isInstalling}
           aria-busy={isInstalling || undefined}
           className={clsx(
-            'inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-primary px-4 text-sm',
-            'font-semibold text-white shadow-md transition-colors hover:bg-primary-hover',
+            'inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-primary px-4 text-sm',
+            'font-semibold text-[hsl(var(--primary-foreground))] transition-colors hover:bg-primary-hover',
             'disabled:cursor-not-allowed disabled:opacity-60',
             focusRing
           )}
@@ -222,3 +222,10 @@ export const InstallPrompt: React.FC<InstallPromptProps> = ({ className, showDel
 };
 
 export default InstallPrompt;
+
+
+
+
+
+
+

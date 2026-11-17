@@ -98,29 +98,43 @@ const BarChart: React.FC<BarChartProps> = ({
 }) => {
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const maxDisplay = maxValue * 1.1;
+  // Percentage heights inside a flex column collapse, so compute pixel heights.
+  const BAR_AREA_PX = 168;
 
   return (
     <div className="w-full">
-      <div className="flex items-end justify-between gap-2 h-56 border-l border-border pl-2">
+      <div className="flex items-end justify-between gap-2 border-l border-[hsl(var(--border))] pb-2 pl-3">
         {data.map((bar) => {
-          const height = (bar.value / maxDisplay) * 100;
+          const heightPx =
+            bar.value > 0
+              ? Math.max(6, Math.round((bar.value / maxDisplay) * BAR_AREA_PX))
+              : 2;
           return (
-            <div key={bar.label} className="flex flex-1 flex-col items-center gap-1">
+            <div
+              key={bar.label}
+              className="flex flex-1 flex-col items-center justify-end gap-1.5"
+              style={{ height: `${BAR_AREA_PX + 28}px` }}
+            >
+              {showValues && bar.value > 0 && (
+                <span className="font-mono text-[0.625rem] font-medium text-text-tertiary">
+                  {bar.value}
+                </span>
+              )}
               <div
-                className={`w-full min-w-[40px] rounded-t transition-all duration-300 ${bar.color}`}
-                style={{ height: `${Math.max(height, bar.value > 0 ? 4 : 0)}%` }}
+                className={`w-full min-w-[40px] rounded-t-sm transition-all duration-300 ${bar.color}`}
+                style={{ height: `${heightPx}px` }}
                 title={`${bar.label}: ${bar.value}${unit}`}
               />
-              {showValues && bar.value > 0 && (
-                <span className="text-xs font-medium text-text-tertiary">{bar.value}</span>
-              )}
             </div>
           );
         })}
       </div>
-      <div className="flex justify-between px-1 pt-2 text-xs text-text-tertiary">
+      <div className="mt-2 flex justify-between border-t border-[hsl(var(--border))] px-1 pt-2">
         {data.map((bar) => (
-          <span key={bar.label} className="min-w-[40px] text-center">
+          <span
+            key={bar.label}
+            className="min-w-[40px] text-center font-mono text-[0.5625rem] uppercase tracking-[0.06em] text-text-tertiary"
+          >
             {bar.label}
           </span>
         ))}

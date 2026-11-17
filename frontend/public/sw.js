@@ -1,5 +1,5 @@
 /*
- * RoofPro CRM service worker (hand-written, no build step, no dependencies).
+ * AUCTUM · ATLAS service worker (hand-written, no build step, no dependencies).
  *
  * Strategy
  *  - Navigation requests (HTML documents): network-first. On success the page is stored
@@ -12,7 +12,7 @@
  *
  * Bump SW_VERSION when the caching logic changes; activate cleans up old caches.
  */
-const SW_VERSION = 'roofpro-v1';
+const SW_VERSION = 'auctum-v2';
 const PRECACHE = `${SW_VERSION}-precache`;
 const PAGES_CACHE = `${SW_VERSION}-pages`;
 const STATIC_CACHE = `${SW_VERSION}-static`;
@@ -171,3 +171,5 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleStaticRequest(request));
   }
 });
+
+

@@ -7,6 +7,9 @@ and keeps every job's history in a real-time Job Feed. This release adds an embe
 **FreeLLMAPI-compatible AI gateway** that powers storm briefs and a natural-language map copilot — with a
 deterministic offline engine so the product still works with zero AI keys.
 
+> **Interface theme:** the UI follows the AUCTUM estate design system — parchment #F1F2EA, ink #17231D,
+> oxblood #8C2F22, 2px geometry and hairline structure, set in Fraunces (display), Archivo (UI) and
+> IBM Plex Mono (data). The product domain (roofing CRM) and all application logic are unchanged.
 > Status: **v1.1 — launch candidate.** Runs locally in one command. See [`docs/BLUEPRINT_COVERAGE.md`](docs/BLUEPRINT_COVERAGE.md)
 > for exactly what is implemented versus roadmap, [`docs/LIMITS.md`](docs/LIMITS.md) for honest limits, and
 > [`docs/RELEASE_VERIFICATION.md`](docs/RELEASE_VERIFICATION.md) for the verified build/test/smoke evidence.
@@ -221,3 +224,4 @@ npm run smoke
 ---
 
 © 2026 ODASI Technologies, Inc. All rights reserved. RoofPro CRM is proprietary software.
+

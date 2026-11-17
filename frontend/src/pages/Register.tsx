@@ -118,23 +118,49 @@ const Register: React.FC = () => {
     getStrengthScore(formData.password) === 5;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
-      <Card className="w-full max-w-lg border-[hsl(var(--border))] shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--background))] p-4 py-10">
+      <Card className="w-full max-w-lg rounded-sm border-[hsl(var(--border))] shadow-none">
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--primary))]/10 ring-1 ring-[hsl(var(--primary))]/20">
-            <UserPlus size={26} className="text-[hsl(var(--primary))]" />
-          </div>
-          <h1 className="mt-4 text-2xl font-bold text-[hsl(var(--text-primary))]">
-            Create Your RoofPro Account
+          <span className="brand-seal h-16 w-16 text-[hsl(var(--text-primary))]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 120 120"
+              width="58"
+              height="58"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.2}
+              role="img"
+              aria-label="AUCTUM seal"
+            >
+              <circle cx="60" cy="60" r="56" strokeDasharray="4 5" opacity={0.55} />
+              <circle cx="60" cy="60" r="44" strokeDasharray="2 4" opacity={0.8} />
+              <g strokeLinecap="round" opacity={0.75}>
+                <line x1="60" y1="38" x2="60" y2="82" />
+                <line x1="38" y1="60" x2="82" y2="60" />
+                <line x1="45" y1="45" x2="75" y2="75" strokeWidth={0.8} />
+                <line x1="75" y1="45" x2="45" y2="75" strokeWidth={0.8} />
+              </g>
+              <path d="M60 30 L64 54 L60 60 L56 54 Z" fill="currentColor" stroke="none" />
+              <path d="M60 90 L56 66 L60 60 L64 66 Z" stroke="currentColor" fill="none" />
+              <circle cx="60" cy="60" r="4" />
+            </svg>
+          </span>
+          <p className="eyebrow mt-4">Open a workspace</p>
+          <h1 className="wordmark mt-1.5 text-[1.9rem] text-[hsl(var(--text-primary))]">
+            AUCTUM
           </h1>
-          <p className="mt-1 text-sm text-[hsl(var(--text-secondary))]">
-            Set up your company profile and start managing roofing jobs.
+          <p className="mt-2 font-mono text-[0.625rem] uppercase tracking-[0.18em] text-[hsl(var(--text-tertiary))]">
+            Atlas · Storm Intelligence CRM
+          </p>
+          <p className="mt-4 border-t border-[hsl(var(--border))] pt-4 text-[0.8125rem] text-[hsl(var(--text-secondary))]">
+            Create your company profile and start the ledger in under a minute.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form onSubmit={handleSubmit} className="auctum-form mt-6 space-y-5">
           {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-[hsl(var(--red))]/10 px-3 py-2 text-sm text-[hsl(var(--red))]">
+            <div className="flex items-start gap-2 border-l-2 border-[hsl(var(--red))] bg-[hsl(var(--red))]/[0.06] px-3 py-2 text-sm text-[hsl(var(--red))]">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -379,17 +405,17 @@ const Register: React.FC = () => {
             isLoading={isSubmitting}
             leftIcon={<UserPlus size={18} />}
             disabled={!isFormValid() && !isSubmitting}
-            className="w-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]"
+            className="w-full rounded-sm bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary-hover))] focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]"
           >
-            Create Account
+            Create workspace
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-[hsl(var(--text-secondary))]">
+        <div className="mt-6 border-t border-[hsl(var(--border))] pt-5 text-center text-[0.8125rem] text-[hsl(var(--text-secondary))]">
           Already have an account?{' '}
           <Link
             to="/login"
-            className="font-medium text-[hsl(var(--primary))] hover:underline"
+            className="font-medium text-[hsl(var(--red))] underline decoration-[hsl(var(--red))]/40 underline-offset-4 hover:decoration-[hsl(var(--red))]"
           >
             Sign in
           </Link>

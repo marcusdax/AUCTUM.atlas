@@ -33,7 +33,12 @@ the project aims at semantic versioning once public.
   blueprint coverage matrix, launch runbook, honest limits, changelog, rewritten README.
 
 ### Changed
-- Prisma schema: `AIProvider`, `AIUsage`, `AISetting`; `StormEvent` gains
+- **UI rebranded to the AUCTUM estate design system** (appearance-only change): parchment/ink/oxblood
+  palette, 2px geometry with hairline rules, Fraunces + Archivo + IBM Plex Mono typography, circular
+  seal logo and AUCTUM wordmark; login/registration, navigation chrome, cards, tables, metric tiles,
+  maps, reports and the PWA shell (manifest, icons, offline page, install prompt) all rethemed.
+  Product logic, routes, API contracts, storage keys and tests are unchanged.
+- Prisma schema: AIProvider, AIUsage, AISetting; StormEvent gains `AIProvider`, `AIUsage`, `AISetting`; `StormEvent` gains
   `externalId/source/geometry/metadata/aiBrief` + indexes; `Lead` gains
   `stormImpactScore/stormScoredAt` + indexes.
 - Docker: removed obsolete compose `version`, added backend/frontend health checks, uploads + logs
@@ -74,3 +79,4 @@ the project aims at semantic versioning once public.
 - Reports (pipeline, profitability, production efficiency), documents, materials, subcontractors,
   change orders, integrations scaffolding.
 - React 18 + Vite frontend, Express API, JWT auth, Socket.IO real-time, Docker Compose stack.
+

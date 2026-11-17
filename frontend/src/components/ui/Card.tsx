@@ -61,7 +61,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       >
         {title && (
           <div className="border-b border-border px-6 py-4">
-            <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+            <h3 className="font-display text-[1.05rem] font-medium text-text-primary">{title}</h3>
             {subtitle && <p className="text-sm text-text-tertiary">{subtitle}</p>}
           </div>
         )}
@@ -95,7 +95,7 @@ export interface BadgeProps {
 }
 
 export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', size = 'md', className }) => {
-  const baseClasses = 'inline-flex items-center rounded-full font-medium';
+  const baseClasses = 'inline-flex items-center rounded-sm font-medium';
 
   const sizeClasses =
     size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-0.5 text-xs';
@@ -159,3 +159,5 @@ export const StatusDot: React.FC<StatusDotProps> = ({ status, size = 'md' }) => 
     />
   );
 };
+
+

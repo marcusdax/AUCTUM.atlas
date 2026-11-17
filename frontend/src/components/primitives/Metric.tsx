@@ -32,10 +32,10 @@ export interface MetricProps {
 }
 
 /**
- * ORBITAL INTELLIGENCE Metric Component
- * 
- * Displays a key metric with title, value, optional trend arrow, 
- * state indicator, and hint. Supports LIVE→SYNCING→STALE→DEGRADED→OFFLINE state machine.
+ * AUCTUM metric tile — archival editorial layout:
+ * mono eyebrow title, Fraunces figure, hairline-separated hint, seal-state dot.
+ * The hint lives under the figure (not in the trailing column) so long labels
+ * can never collide with the title on narrow grids.
  */
 const Metric: React.FC<MetricProps> = ({
   title,
@@ -50,14 +50,12 @@ const Metric: React.FC<MetricProps> = ({
   icon,
   colorClass,
 }) => {
-  // State-to-color mapping per ORBITAL INTELLIGENCE visual identity
-  // Using CSS variables defined in styles/index.css
   const stateDotColor: Record<string, string> = {
-    LIVE: 'hsl(var(--state-live))',       // Cyan hsl(217 91% 53%)
-    SYNCING: 'hsl(var(--state-syncing))', // Amber hsl(210 23% 60%)
-    STALE: 'hsl(var(--state-stale))',     // Tertiary hsl(210 15% 40%)
-    DEGRADED: 'hsl(var(--state-degraded))', // Orange-red hsl(25 80% 55%)
-    OFFLINE: 'hsl(var(--state-offline))',  // Disabled hsl(210 11% 29%)
+    LIVE: 'hsl(var(--state-live))',
+    SYNCING: 'hsl(var(--state-syncing))',
+    STALE: 'hsl(var(--state-stale))',
+    DEGRADED: 'hsl(var(--state-degraded))',
+    OFFLINE: 'hsl(var(--state-offline))',
   };
 
   const trendDirectionColor: Record<'up' | 'down' | 'flat', string> = {
@@ -66,73 +64,76 @@ const Metric: React.FC<MetricProps> = ({
     flat: 'hsl(var(--text-tertiary))',
   };
 
-  const trendIcon = trend?.direction === 'up' ? (
-    <TrendingUp className="h-4 w-4 shrink-0" aria-hidden="true" />
-  ) : trend?.direction === 'down' ? (
-    <TrendingDown className="h-4 w-4 shrink-0" aria-hidden="true" />
-  ) : null;
+  const trendIcon =
+    trend?.direction === 'up' ? (
+      <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+    ) : trend?.direction === 'down' ? (
+      <TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+    ) : null;
 
   return (
     <div
       className={clsx(
-        'rounded-xl bg-[hsl(var(--background-card))] border border-border transition-shadow hover:shadow-md p-5',
+        'rounded-xl border border-border bg-[hsl(var(--background-card))] p-4 transition-colors hover:bg-[hsl(var(--background-accent))]',
         pulse && 'animate-pulse-soft',
-        interactive && 'cursor-pointer hover:bg-[hsl(var(--background-accent))]',
+        interactive && 'cursor-pointer',
         className
       )}
-      onClick={interactive && onClick ? (e: React.MouseEvent<HTMLDivElement>) => onClick(e) : undefined}
+      onClick={
+        interactive && onClick
+          ? (e: React.MouseEvent<HTMLDivElement>) => onClick(e)
+          : undefined
+      }
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
-      aria-label={interactive ? `${title}: ${typeof value === 'string' ? value : String(value)}` : undefined}
+      aria-label={
+        interactive
+          ? `${title}: ${typeof value === 'string' ? value : String(value)}`
+          : undefined
+      }
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            {icon && (
-              <div className={clsx('flex-shrink-0', colorClass)}>
-                {icon}
-              </div>
-            )}
-            <div>
-              <p className="text-sm font-medium text-text-secondary">{title}</p>
-              <p className="mt-1 text-2xl font-bold text-text-primary tabular-nums">
-                {typeof value === 'number' ? value.toLocaleString() : value}
-              </p>
-            </div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {icon && <span className={clsx('shrink-0', colorClass)}>{icon}</span>}
+            <p className="truncate font-mono text-[0.5625rem] font-medium uppercase tracking-[0.16em] text-text-tertiary">
+              {title}
+            </p>
           </div>
+          <p className="mt-2 font-display text-[1.9rem] font-medium leading-none text-text-primary tabular-nums">
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </p>
+          {hint && (
+            <p className="mt-2 border-t border-[hsl(var(--border))] pt-2 text-[0.6875rem] leading-snug text-text-secondary">
+              {hint}
+            </p>
+          )}
         </div>
 
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          {/* State indicator dot */}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           <span
-            className={clsx(
-              'h-3 w-3 rounded-full flex-shrink-0',
-              stateDotColor[state] || stateDotColor.LIVE
-            )}
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: stateDotColor[state] || stateDotColor.LIVE }}
             aria-hidden="true"
             title={state}
             role="img"
             aria-label={`State: ${state}`}
           />
-          
           {trend && (
-            <div className="flex items-center gap-1.5 text-xs">
+            <div className="flex items-center gap-1 text-[0.625rem] font-medium">
               {trendIcon && (
                 <span
-                  className={clsx('flex shrink-0', trendDirectionColor[trend.direction as 'up' | 'down' | 'flat'])}
+                  className="flex shrink-0"
+                  style={{ color: trendDirectionColor[trend.direction] }}
                 >
                   {trendIcon}
                 </span>
               )}
-              <span className={clsx('font-medium', trendDirectionColor[trend.direction as 'up' | 'down' | 'flat'])}>
+              <span style={{ color: trendDirectionColor[trend.direction] }}>
                 {trend.change > 0 ? `+${trend.change}` : trend.change}
               </span>
               <span className="text-text-tertiary">({trend.percent}%)</span>
             </div>
-          )}
-
-          {hint && (
-            <p className="text-xs text-text-tertiary text-right">{hint}</p>
           )}
         </div>
       </div>

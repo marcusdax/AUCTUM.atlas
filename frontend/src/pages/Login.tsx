@@ -2,19 +2,44 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthProvider';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
-import { AlertCircle, Eye, EyeOff, Lock, LogIn, Mail, Sparkles } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Lock, LogIn, Mail, Sparkles, ShieldCheck } from 'lucide-react';
 
 const inputClassName =
-  'input pl-10 focus:border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/30';
+  'input rounded-sm bg-[hsl(var(--background-elevated))] pl-10 focus:border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]';
 
 /** Demo workspace created by `npm run seed:demo`; safe to show on a demo deployment. */
 const DEMO_EMAIL = 'demo@roofprocrm.com';
 const DEMO_PASSWORD = 'RoofPro!2026';
 
+const AuctumSeal: React.FC<{ size?: number }> = ({ size = 56 }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 120 120"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.2}
+    role="img"
+    aria-label="AUCTUM seal"
+  >
+    <circle cx="60" cy="60" r="56" strokeDasharray="4 5" opacity={0.55} />
+    <circle cx="60" cy="60" r="44" strokeDasharray="2 4" opacity={0.8} />
+    <g strokeLinecap="round" opacity={0.75}>
+      <line x1="60" y1="38" x2="60" y2="82" />
+      <line x1="38" y1="60" x2="82" y2="60" />
+      <line x1="45" y1="45" x2="75" y2="75" strokeWidth={0.8} />
+      <line x1="75" y1="45" x2="45" y2="75" strokeWidth={0.8} />
+    </g>
+    <path d="M60 30 L64 54 L60 60 L56 54 Z" fill="currentColor" stroke="none" />
+    <path d="M60 90 L56 66 L60 60 L64 66 Z" stroke="currentColor" fill="none" />
+    <circle cx="60" cy="60" r="4" />
+  </svg>
+);
+
 const Login: React.FC = () => {
   const { login } = useAuth();
-const navigate = useNavigate();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -59,126 +84,146 @@ const navigate = useNavigate();
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
-      <Card className="w-full max-w-md border-[hsl(var(--border))] shadow-xl">
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--primary))]/10 ring-1 ring-[hsl(var(--primary))]/20">
-            <LogIn size={26} className="text-[hsl(var(--primary))]" />
-          </div>
-          <h1 className="mt-4 text-2xl font-bold text-[hsl(var(--text-primary))]">
-            Welcome to RoofPro CRM
-          </h1>
-          <p className="mt-1 text-sm text-[hsl(var(--text-secondary))]">
-            Sign in to your account to continue.
+    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--background))] px-4 py-10">
+      <div className="w-full max-w-[440px]">
+        {/* Brand lockup */}
+        <div className="mb-8 flex flex-col items-center text-center">
+          <span className="brand-seal h-[76px] w-[76px] text-[hsl(var(--text-primary))]">
+            <AuctumSeal size={68} />
+          </span>
+          <p className="eyebrow mt-5">Verified, from origin</p>
+          <h1 className="wordmark mt-2 text-[2.4rem] text-text-primary">AUCTUM</h1>
+          <p className="mt-2 font-mono text-[0.625rem] uppercase tracking-[0.24em] text-text-tertiary">
+            Atlas · Storm Intelligence CRM
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-[hsl(var(--red))]/10 px-3 py-2 text-sm text-[hsl(var(--red))]">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label
-              htmlFor="login-email"
-              className="block text-sm font-medium text-[hsl(var(--text-secondary))]"
-            >
-              Email
-            </label>
-            <div className="relative">
-              <Mail
-                size={18}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-tertiary))]"
-              />
-              <input
-                id="login-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                className={inputClassName}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isSubmitting}
-                required
-              />
-            </div>
+        <div className="border border-[hsl(var(--border))] bg-[hsl(var(--background-card))] p-7 sm:p-8">
+          <div className="border-b border-[hsl(var(--border))] pb-4">
+            <h2 className="font-display text-[1.5rem] font-medium leading-tight text-text-primary">
+              Sign in to the estate
+            </h2>
+            <p className="mt-1 text-[0.8125rem] text-text-secondary">
+              One ledger for storms, jobs and receipts.
+            </p>
           </div>
 
-          <div className="space-y-1">
-            <label
-              htmlFor="login-password"
-              className="block text-sm font-medium text-[hsl(var(--text-secondary))]"
-            >
-              Password
-            </label>
-            <div className="relative">
-              <Lock
-                size={18}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-tertiary))]"
-              />
-              <input
-                id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                className="input pl-10 pr-10 focus:border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/30"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isSubmitting}
-                required
-                minLength={1}
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setShowPassword((v) => !v)}
-                disabled={isSubmitting}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[hsl(var(--text-tertiary))] hover:bg-[hsl(var(--background-elevated))] hover:text-[hsl(var(--text-primary))]"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            {error && (
+              <div className="flex items-start gap-2 border-l-2 border-[hsl(var(--red))] bg-[hsl(var(--red))]/[0.06] px-3 py-2 text-[0.8125rem] text-[hsl(var(--red))]">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+                <span role="alert">{error}</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="login-email"
+                className="block font-mono text-[0.625rem] font-medium uppercase tracking-[0.14em] text-text-tertiary"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+                Email
+              </label>
+              <div className="relative">
+                <Mail
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+                  aria-hidden="true"
+                />
+                <input
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  className={inputClassName}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
             </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="login-password"
+                className="block font-mono text-[0.625rem] font-medium uppercase tracking-[0.14em] text-text-tertiary"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <Lock
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+                  aria-hidden="true"
+                />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="input rounded-sm bg-[hsl(var(--background-elevated))] pl-10 pr-10 focus:border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  minLength={1}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  disabled={isSubmitting}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-text-tertiary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={isSubmitting}
+              leftIcon={<LogIn size={16} />}
+              className="w-full rounded-sm bg-primary font-medium tracking-[0.02em] text-[hsl(var(--primary-foreground))] hover:bg-primary-hover"
+            >
+              Sign in
+            </Button>
+          </form>
+
+          <div className="mt-6 border-t border-[hsl(var(--border))] pt-5">
+            <button
+              type="button"
+              onClick={fillDemo}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] bg-transparent px-4 py-2 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-text-secondary transition-colors hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--background-accent))] hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))]"
+            >
+              <Sparkles size={14} aria-hidden="true" />
+              Enter the demo ledger
+            </button>
+            <p className="mt-3 text-center font-mono text-[0.625rem] tracking-[0.04em] text-text-tertiary">
+              demo@roofprocrm.com · RoofPro!2026
+            </p>
           </div>
+        </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            isLoading={isSubmitting}
-            leftIcon={<LogIn size={18} />}
-            className="w-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] focus:ring-[hsl(var(--primary))] focus:ring-offset-[hsl(var(--background))]"
-          >
-            Sign In
-          </Button>
-        </form>
-
-        <div className="mt-6 space-y-3 text-center text-sm text-[hsl(var(--text-secondary))]">
-          <button
-            type="button"
-            onClick={fillDemo}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] px-4 py-2 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))]"
-          >
-            <Sparkles size={16} aria-hidden="true" />
-            Try the demo workspace
-          </button>
-          <p className="text-xs text-[hsl(var(--text-tertiary))]">
-            Demo credentials: demo@roofprocrm.com · RoofPro!2026
-          </p>
-          <p>
-            Don't have an account?{' '}
+        <div className="mt-6 flex flex-col items-center gap-3 text-center">
+          <p className="text-[0.8125rem] text-text-secondary">
+            No workspace yet?{' '}
             <Link
               to="/register"
-              className="font-medium text-[hsl(var(--primary))] hover:underline"
+              className="font-medium text-[hsl(var(--red))] underline decoration-[hsl(var(--red))]/40 underline-offset-4 transition-colors hover:decoration-[hsl(var(--red))]"
             >
               Create an account
             </Link>
           </p>
+          <p className="flex items-center gap-1.5 font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-text-tertiary">
+            <ShieldCheck size={11} aria-hidden="true" />
+            Encrypted sessions · tenant-isolated ledger
+          </p>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

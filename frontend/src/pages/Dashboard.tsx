@@ -448,7 +448,7 @@ const QuickStart: React.FC<{ firstName?: string }> = ({ firstName }) => {
   return (
     <section aria-labelledby="quick-start-heading" className="mb-6">
       <div className="mb-3">
-        <h2 id="quick-start-heading" className="text-lg font-semibold text-text-primary">
+        <h2 id="quick-start-heading" className="font-display text-[1.35rem] font-medium text-text-primary">
           Quick Start
         </h2>
         <p className="text-sm text-text-tertiary">
@@ -470,7 +470,7 @@ const QuickStart: React.FC<{ firstName?: string }> = ({ firstName }) => {
             )}
           >
             <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background-accent))] text-[hsl(var(--text-primary))]"
               aria-hidden="true"
             >
               {action.icon}
@@ -486,13 +486,13 @@ const QuickStart: React.FC<{ firstName?: string }> = ({ firstName }) => {
           type="button"
           onClick={() => navigate('/storm-tracking')}
           className={clsx(
-            'flex min-h-[76px] items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4 text-left',
+            'flex min-h-[76px] items-center gap-3 rounded-xl border border-[hsl(var(--border-hover))] bg-[hsl(var(--background-elevated))] p-4 text-left',
             'transition-colors hover:border-primary hover:bg-primary/10',
             QUICK_START_FOCUS
           )}
         >
           <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background-accent))] text-[hsl(var(--text-primary))]"
             aria-hidden="true"
           >
             <Radar size={22} />
@@ -727,7 +727,7 @@ const ActivityFeed: React.FC<{ posts: FeedPost[]; error?: boolean }> = ({ posts,
                 {post.user
                   ? `${post.user.firstName} ${post.user.lastName}`
                   : post.isSystem
-                    ? 'RoofPro'
+                    ? 'AUCTUM'
                     : 'Team member'}
               </span>
               <span className="text-xs text-text-tertiary">· {timeAgo(post.createdAt)}</span>
@@ -864,3 +864,8 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
+
+
+
+

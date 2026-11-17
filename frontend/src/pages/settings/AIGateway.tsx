@@ -986,7 +986,7 @@ const AIGateway: React.FC = () => {
       <Card title="About FreeLLMAPI">
         <div className="space-y-2 text-sm text-text-secondary">
           <p>
-            RoofPro adopts the{' '}
+            ATLAS adopts the{' '}
             <a
               href="https://github.com/marcusdax/freellmapi"
               target="_blank"
@@ -1028,3 +1028,4 @@ const AIGateway: React.FC = () => {
 };
 
 export default AIGateway;
+

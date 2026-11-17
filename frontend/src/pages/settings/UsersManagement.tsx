@@ -398,7 +398,7 @@ const UsersManagement: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold">Users</h1>
           <p className="text-text-secondary">
-            Manage who has access to your RoofPro CRM account.
+            Manage who has access to your AUCTUM workspace.
           </p>
         </div>
         <Button onClick={openAddForm} leftIcon={<UserPlus size={16} />}>
@@ -572,3 +572,4 @@ const UsersManagement: React.FC = () => {
 };
 
 export default UsersManagement;
+

@@ -1,22 +1,18 @@
 /**
- * RoofPro CRM — Unified Design System
- * Consolidates the former styles/index.css (Tailwind/HSL) and
- * styles/design-system.css (raw --c- tokens) into a single, coherent
- * HSL-based token system.
+ * AUCTUM × ATLAS — Unified design system
  *
- * Theme scheme
- *   - Dark is the default theme. All color tokens live on :root so the
- *     correct palette is visible on first paint (no JS required) and while
- *     the toggle resolves. When the mode is "dark" we leave the :root values
- *     untouched.
- *   - Light mode overrides are applied under [data-theme="light"].
- *   - components/Layout.tsx sets document.documentElement.setAttribute('data-theme', 'dark'|'light').
- *     The broken class-based toggle (.light / .light-theme) is intentionally removed.
+ * Brand palette and typography follow the AUCTUM estate design system:
+ *   parchment #F1F2EA · ink #17231D · oxblood #8C2F22 · sage #526055
+ *   gold #6D592D · navy #1F2E33 · hairlines at 14% ink
+ *   display: Fraunces · UI: Archivo · data/labels: IBM Plex Mono
+ * Geometry is deliberately sharp: 2px radius, hairline rules, no glossy elevation.
  *
- * Backward compatibility
- *   - Every hsl(var(--...)) token referenced across the app is preserved.
- *   - The legacy --c-* aliases (used by component CSS/JS via plain var(--c-...))
- *     resolve to the live HSL tokens, so they switch with the theme automatically.
+ * Light ("parchment") is the default theme. `[data-theme="dark"]` provides an
+ * ink ground variant. components/Layout.tsx toggles the data-theme attribute.
+ *
+ * Backward compatibility: every hsl(var(--...)) token used across the app is
+ * preserved, and the legacy --c-* aliases resolve to the live tokens so they
+ * follow the theme automatically.
  */
 
 @tailwind base;
@@ -26,34 +22,56 @@
 /* ===== Design Tokens ===== */
 
 :root {
+  /* ===== Brand ground (Auctum parchment) ===== */
+  --paper: #f1f2ea;
+  --paper-deep: #d5dac6;
+  --paper-warm: #e9e2d6;
+  --ink: #17231d;
+  --ink-soft: #2a3a32;
+  --navy: #1f2e33;
+  --oxblood: #8c2f22;
+  --oxblood-dark: #7a1f1f;
+  --sage: #526055;
+  --slate: #536056;
+  --gold: #6d592d;
+  --gold-bright: #cb8622;
+  --seal-verified: #27693b;
+  --seal-review: #7e5415;
+  --seal-flagged: #8c2f22;
+  --hairline: rgb(23 35 29 / 0.14);
+  --hairline-strong: rgb(23 35 29 / 0.28);
+
   /* ===== Color: Surface / background tier ===== */
-  --background: 216 33% 6%;            /* #0a0e14 */
-  --background-elevated: 221 33% 11%;  /* #131926 */
-  --background-card: 223 32% 15%;      /* #1a2133 */
-  --background-accent: 227 45% 21%;    /* #1e294f */
-  --surface: 223 32% 15%;             /* alias of --background-card */
+  --background: 75 20% 93%;            /* parchment */
+  --background-elevated: 75 18% 90%;   /* raised parchment */
+  --background-card: 75 20% 93%;       /* same as ground; hairlines carry structure */
+  --background-accent: 84 18% 81%;     /* parchment-deep hover */
+  --surface: 75 20% 93%;
 
   /* ===== Color: Text levels ===== */
-  --text-primary: 210 30% 97%;        /* #f8fafc */
-  --text-secondary: 210 23% 60%;     /* #94a3b8 */
-  --text-tertiary: 210 15% 40%;     /* #64748b */
-  --text-disabled: 210 11% 29%;      /* #475569 */
+  --text-primary: 153 21% 11%;         /* ink */
+  --text-secondary: 105 9% 34%;        /* sage */
+  --text-tertiary: 110 7% 45%;         /* muted sage */
+  --text-disabled: 110 6% 62%;
 
-  /* ===== Color: Palette (hue buckets) ===== */
-  --primary: 217 91% 53%;            /* blue */
-  --primary-hover: 221 83% 53%;
-  --teal: 191 90% 50%;
-  --amber: 38 92% 50%;
-  --amber-hover: 38 89% 45%;
-  --emerald: 150 60% 50%;
-  --emerald-hover: 150 54% 46%;
-  --red: 0 90% 55%;
-  --red-hover: 0 84% 53%;
-  --orange: 25 95% 50%;             /* #f97316 */
-  --purple: 255 80% 60%;
-  --pink: 330 85% 60%;
+  /* ===== Color: Palette ===== */
+  --primary: 153 21% 11%;              /* ink — the AUCTUM action colour */
+  --primary-hover: 153 18% 19%;
+  --primary-foreground: 75 20% 93%;    /* parchment on ink */
+  --secondary: 84 18% 81%;
+  --secondary-foreground: 153 21% 11%;
+  --teal: 180 59% 25%;                 /* roaster (market accent) */
+  --amber: 36 71% 32%;                 /* review gold, readable on parchment */
+  --amber-hover: 36 71% 26%;
+  --emerald: 139 46% 28%;              /* verified green */
+  --emerald-hover: 139 46% 22%;
+  --red: 9 60% 34%;                    /* oxblood */
+  --red-hover: 0 59% 27%;
+  --orange: 35 71% 46%;                /* patron */
+  --purple: 262 41% 39%;               /* consumer */
+  --pink: 330 45% 42%;
 
-  /* ===== Color: Semantic aliases (resolved colors for direct CSS use) ===== */
+  /* ===== Color: Semantic aliases ===== */
   --color-primary: hsl(var(--primary));
   --color-primary-hover: hsl(var(--primary-hover));
   --color-success: hsl(var(--emerald));
@@ -69,23 +87,22 @@
   --color-border-hover: hsl(var(--border-hover));
 
   /* ===== Color: Border & dividers ===== */
-  --border: 210 18% 22%;
-  --border-hover: 210 13% 30%;
+  --border: 150 8% 80%;
+  --border-hover: 150 8% 68%;
 
-  /* ===== Color: Severity colors ===== */
-  --severity-extreme: 0 90% 55%;
-  --severity-severe: 25 80% 55%;
-  --severity-moderate: 40 90% 50%;
-  --severity-minor: 217 91% 53%;
-  --severity-unknown: 210 11% 29%;        /* = text-disabled */
+  /* ===== Color: Severity (AUCTUM seal/status palette) ===== */
+  --severity-extreme: 9 60% 34%;       /* oxblood / flagged */
+  --severity-severe: 36 71% 32%;       /* review gold */
+  --severity-moderate: 35 71% 46%;     /* amber */
+  --severity-minor: 180 59% 25%;       /* roaster teal */
+  --severity-unknown: 110 7% 45%;
 
-  /* Severity tint backgrounds (theme-aware via alpha on the HSL severity token) */
-  --severity-extreme-bg: hsla(var(--severity-extreme) / 0.15);
-  --severity-severe-bg: hsla(var(--severity-severe) / 0.15);
-  --severity-moderate-bg: hsla(var(--severity-moderate) / 0.15);
-  --severity-minor-bg: hsla(var(--severity-minor) / 0.15);
+  --severity-extreme-bg: hsla(var(--severity-extreme) / 0.1);
+  --severity-severe-bg: hsla(var(--severity-severe) / 0.1);
+  --severity-moderate-bg: hsla(var(--severity-moderate) / 0.12);
+  --severity-minor-bg: hsla(var(--severity-minor) / 0.1);
 
-  /* ===== Legacy --c-* aliases (component CSS/JS compatibility) ===== */
+  /* ===== Legacy --c-* aliases ===== */
   --c-bg: hsl(var(--background));
   --c-bg-elevated: hsl(var(--background-elevated));
   --c-bg-card: hsl(var(--background-card));
@@ -111,18 +128,19 @@
   --c-severity-moderate: hsl(var(--severity-moderate));
   --c-severity-minor: hsl(var(--severity-minor));
   --c-severity-unknown: hsl(var(--severity-unknown));
-  --c-sev-extreme-bg: hsla(var(--severity-extreme) / 0.15);
-  --c-sev-severe-bg: hsla(var(--severity-severe) / 0.15);
-  --c-sev-moderate-bg: hsla(var(--severity-moderate) / 0.15);
-  --c-sev-minor-bg: hsla(var(--severity-minor) / 0.15);
+  --c-sev-extreme-bg: hsla(var(--severity-extreme) / 0.1);
+  --c-sev-severe-bg: hsla(var(--severity-severe) / 0.1);
+  --c-sev-moderate-bg: hsla(var(--severity-moderate) / 0.12);
+  --c-sev-minor-bg: hsla(var(--severity-minor) / 0.1);
   --c-border: hsl(var(--border));
   --c-border-hover: hsl(var(--border-hover));
 
   /* ===== Typography ===== */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-heading: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-size-xs: 0.625rem;     /* 10px */
-  --font-size-sm: 0.75rem;      /* 12px */
+  --font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-size-xs: 0.6875rem;    /* 11px */
+  --font-size-sm: 0.8125rem;    /* 13px */
   --font-size-md: 0.875rem;     /* 14px */
   --font-size-base: 1rem;       /* 16px */
   --font-size-lg: 1.125rem;     /* 18px */
@@ -134,85 +152,118 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-  --line-height-tight: 1.25;
+  --line-height-tight: 1.2;
   --line-height-normal: 1.5;
-  --line-height-loose: 1.75;
+  --line-height-loose: 1.7;
 
-  /* ===== ORBITAL INTELLIGENCE Additional Tokens ===== */
-  --intelligence-cyan: 217 91% 53%;     /* Primary intelligence signal */
-  --intelligence-violet: 255 80% 60%;   /* Secondary intelligence layer */
-  --intelligence-magenta: 330 85% 60%;  /* AI/system emphasis */
+  /* ===== Intelligence signal tokens (Atlas / Helios) ===== */
+  --intelligence-cyan: 180 59% 25%;     /* teal — live signal */
+  --intelligence-violet: 262 41% 39%;   /* consumer violet */
+  --intelligence-magenta: 330 45% 42%;
 
-  /* ===== Animation easings for HUD-style motion ===== */
+  /* ===== Motion ===== */
   --ease-out-exp: cubic-bezier(0.15, 0.4, 0.2, 1);
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.2, 0.64, 1);
 
   /* ===== State indicators ===== */
-  --state-live: hsl(217 91% 53%);   /* Cyan - live data */
-  --state-syncing: hsl(210 23% 60%); /* Amber - syncing */
-  --state-stale: hsl(210 15% 40%);  /* Tertiary - stale data */
-  --state-degraded: hsl(25 80% 55%);/* Orange - degraded mode */
-  --state-offline: hsl(210 11% 29%);/* Disabled - offline */
+  --state-live: hsl(var(--emerald));
+  --state-syncing: hsl(var(--amber));
+  --state-stale: hsl(var(--text-tertiary));
+  --state-degraded: hsl(var(--orange));
+  --state-offline: hsl(var(--text-disabled));
 
   /* ===== Spacing (4px base unit) ===== */
   --space-0: 0;
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-7: 1.75rem;   /* 28px */
-  --space-8: 2rem;      /* 32px */
-  --space-9: 2.25rem;   /* 36px */
-  --space-10: 2.5rem;    /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-14: 3.5rem;   /* 56px */
-  --space-16: 4rem;     /* 64px */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-9: 2.25rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-14: 3.5rem;
+  --space-16: 4rem;
 
-  /* ===== Border radius ===== */
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;     /* 16px */
+  /* ===== Border radius — AUCTUM is sharp: 2px ===== */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
   --radius-full: 9999px;
 
-  /* ===== Shadows (subtle elevation) ===== */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.25), 0 8px 10px rgba(0, 0, 0, 0.15);
-  --shadow-map-control: 0 2px 12px rgba(0, 0, 0, 0.4);
+  /* ===== Shadows — hairline structure instead of elevation ===== */
+  --shadow-sm: 0 1px 0 rgb(23 35 29 / 0.04);
+  --shadow: 0 1px 2px rgb(23 35 29 / 0.06);
+  --shadow-md: 0 2px 6px rgb(23 35 29 / 0.08);
+  --shadow-lg: 0 8px 20px rgb(23 35 29 / 0.1);
+  --shadow-xl: 0 16px 40px rgb(23 35 29 / 0.14);
+  --shadow-map-control: 0 2px 0 rgb(23 35 29 / 0.08);
 
-  /* ===== Animation timing & easings ===== */
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 400ms;
+  /* ===== Animation timing ===== */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
   --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ===== Layout ===== */
   --header-height: 4rem;
   --footer-height: 2.25rem;
-  --sidebar-width: 16rem;     /* 256px (Tailwind w-64) */
-  --sidebar-width-collapsed: 4rem; /* 64px (Tailwind w-16) */
+  --sidebar-width: 16rem;
+  --sidebar-width-collapsed: 4rem;
+
+  color-scheme: light;
 }
 
-/* ===== Light theme ===== */
-[data-theme="light"] {
-  --background: 0 0% 100%;
-  --background-elevated: 210 20% 97%;
-  --background-card: 210 20% 96%;
-  --background-accent: 210 30% 93%;
-  --surface: 210 20% 96%;
-  --text-primary: 223 30% 10%;
-  --text-secondary: 210 20% 40%;
-  --text-tertiary: 210 11% 50%;
-  --text-disabled: 210 8% 60%;
-  --severity-unknown: 210 15% 50%;
-  --border: 210 20% 90%;
-  --border-hover: 210 20% 85%;
+/* ===== Dark theme — AUCTUM ink ground ===== */
+[data-theme='dark'] {
+  --background: 153 21% 11%;           /* ink */
+  --background-elevated: 193 25% 16%;  /* navy */
+  --background-card: 193 25% 16%;
+  --background-accent: 153 18% 20%;
+  --surface: 193 25% 16%;
+
+  --text-primary: 75 20% 93%;          /* parchment */
+  --text-secondary: 84 14% 74%;
+  --text-tertiary: 105 9% 60%;
+  --text-disabled: 110 6% 44%;
+
+  --primary: 9 55% 47%;                /* brighter oxblood on ink */
+  --primary-hover: 9 55% 41%;
+  --primary-foreground: 75 20% 93%;
+
+  --border: 150 10% 30%;
+  --border-hover: 150 10% 40%;
+
+  --severity-extreme: 9 72% 58%;
+  --severity-severe: 36 62% 52%;
+  --severity-moderate: 38 78% 58%;
+  --severity-minor: 180 45% 52%;
+  --severity-unknown: 105 8% 55%;
+
+  --severity-extreme-bg: hsla(var(--severity-extreme) / 0.16);
+  --severity-severe-bg: hsla(var(--severity-severe) / 0.16);
+  --severity-moderate-bg: hsla(var(--severity-moderate) / 0.16);
+  --severity-minor-bg: hsla(var(--severity-minor) / 0.16);
+
+  --state-live: hsl(var(--severity-minor));
+  --state-syncing: hsl(var(--severity-severe));
+  --state-stale: hsl(var(--text-tertiary));
+  --state-degraded: hsl(var(--severity-moderate));
+  --state-offline: hsl(var(--text-disabled));
+
+  --shadow-sm: 0 1px 0 rgb(0 0 0 / 0.2);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 6px rgb(0 0 0 / 0.32);
+  --shadow-lg: 0 8px 20px rgb(0 0 0 / 0.36);
+  --shadow-xl: 0 16px 40px rgb(0 0 0 / 0.4);
+  --shadow-map-control: 0 2px 0 rgb(0 0 0 / 0.3);
+
+  color-scheme: dark;
 }
 
 /* ===== Base styles ===== */
@@ -233,7 +284,7 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-family);
   font-size: 1rem;
   line-height: 1.5;
   background-color: hsl(var(--background));
@@ -241,22 +292,106 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'kern' 1, 'liga' 1;
 }
 
 #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: hsl(var(--background));
+}
+
+::selection {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
 }
 
 /* ===== Typography scale ===== */
 
-h1 { font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); }
-h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); }
+h1, h2 {
+  font-family: var(--font-heading);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.015em;
+  color: hsl(var(--text-primary));
+}
+
+h1 { font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.6rem); }
+h2 { font-size: var(--font-size-2xl); }
 h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); line-height: var(--line-height-tight); }
 h4 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); line-height: var(--line-height-normal); }
-h5 { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.05em; }
-h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.05em; }
+h5 { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.08em; }
+h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* ===== AUCTUM brand utility classes ===== */
+
+/* Uppercase mono eyebrow used above headings and on labels. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--text-tertiary));
+}
+
+/* Data / numeric readouts. */
+.stat-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Thin rules used to structure sections without elevation. */
+.rule {
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.rule--strong {
+  border-top-color: var(--hairline-strong);
+}
+
+/* Brand wordmark: Fraunces display with tight tracking. */
+.wordmark {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+/* Seal container: circular hairline mark. */
+.brand-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--hairline-strong);
+  background: hsl(var(--background));
+  color: hsl(var(--text-primary));
+}
+
+/* Small verification stamp. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: hsl(var(--text-secondary));
+}
 
 /* ===== Utility classes ===== */
 
@@ -272,71 +407,106 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
   border: 0 !important;
 }
 
-/* ===== Cards ===== */
+/* ===== Component classes (in the components layer so utilities can override) ===== */
 
-.card {
-  @apply bg-[hsl(var(--background-card))] border border-[hsl(var(--border))] rounded-xl p-6 shadow-sm;
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-[hsl(var(--background-card))] border border-[hsl(var(--border))] rounded-xl p-6;
+    box-shadow: none;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))] focus:ring-primary;
+    font-family: var(--font-family);
+    letter-spacing: 0.01em;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-[hsl(var(--primary-foreground))] hover:bg-primary-hover;
+  }
+
+  .btn-secondary {
+    @apply bg-[hsl(var(--background-elevated))] text-text-primary border border-[hsl(var(--border))] hover:bg-[hsl(var(--background-accent))];
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-text-secondary hover:bg-[hsl(var(--background-accent))] hover:text-text-primary;
+  }
+
+  .btn-sm { @apply h-8 px-3 text-xs; }
+  .btn-md { @apply h-10 px-4 text-sm; }
+  .btn-lg { @apply h-12 px-5 text-base; }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .badge-extreme { background: var(--c-sev-extreme-bg); color: var(--c-severity-extreme); }
+  .badge-severe { background: var(--c-sev-severe-bg); color: var(--c-severity-severe); }
+  .badge-moderate { background: var(--c-sev-moderate-bg); color: var(--c-severity-moderate); }
+  .badge-minor { background: var(--c-sev-minor-bg); color: var(--c-severity-minor); }
+  .badge-info { background: hsla(var(--primary) / 0.1); color: hsl(var(--primary)); }
+
+  /* Inputs */
+  .input {
+    @apply w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm text-text-primary placeholder-[hsl(var(--text-tertiary))] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+  }
+
+  .input:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 1px hsl(var(--primary));
+  }
 }
 
-/* ===== Buttons ===== */
-
-.btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))] focus:ring-primary;
+/* ===== AUCTUM form labels ===== */
+.auctum-form label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: hsl(var(--text-tertiary));
 }
 
-.btn-primary {
-  @apply bg-primary text-white hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
+/* ===== Tables ===== */
+
+table { border-color: hsl(var(--border)); }
+
+thead th {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--text-tertiary));
 }
 
-.btn-secondary {
-  @apply bg-[hsl(var(--background-elevated))] text-text-primary border border-[hsl(var(--border))] hover:bg-[hsl(var(--background-accent))];
-}
-
-.btn-ghost {
-  @apply bg-transparent text-text-secondary hover:bg-[hsl(var(--background-card))];
-}
-
-.btn-sm { @apply h-8 px-3 text-xs; }
-.btn-md { @apply h-10 px-4 text-sm; }
-.btn-lg { @apply h-12 px-5 text-base; }
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ===== Badges ===== */
-
-.badge {
-  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
-}
-
-.badge-extreme { background: var(--c-sev-extreme-bg); color: var(--c-severity-extreme); }
-.badge-severe { background: var(--c-sev-severe-bg); color: var(--c-severity-severe); }
-.badge-moderate { background: var(--c-sev-moderate-bg); color: var(--c-severity-moderate); }
-.badge-minor { background: var(--c-sev-minor-bg); color: var(--c-severity-minor); }
-.badge-info { background: hsla(var(--primary) / 0.15); color: hsl(var(--primary)); }
-
-/* ===== Inputs ===== */
-
-.input {
-  @apply w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm text-text-primary placeholder-[hsl(var(--text-tertiary))] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
-}
-
-/* ===== Leaflet overrides ===== */
+/* ===== Leaflet overrides — parchment map chrome ===== */
 
 .leaflet-container {
-  background: hsl(var(--background));
+  background: hsl(var(--background-accent));
   color: hsl(var(--text-primary));
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-family);
 }
 
 .leaflet-popup-content-wrapper {
   background: hsl(var(--background-card));
   color: hsl(var(--text-primary));
   border-radius: var(--radius-lg);
-  border: 1px solid hsl(var(--border));
-  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: var(--shadow-lg);
 }
 
 .leaflet-popup-tip {
@@ -350,8 +520,11 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
 }
 
 .leaflet-popup-content h4 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: hsl(var(--text-primary));
   margin-bottom: var(--space-2);
 }
@@ -363,19 +536,27 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
 
 .leaflet-popup-content button {
   background: hsl(var(--primary));
-  color: #ffffff;
+  color: hsl(var(--primary-foreground));
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);
+  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   font-weight: var(--font-weight-medium);
 }
 
 .leaflet-control-attribution {
-  background: hsla(216 33% 6% / 0.85) !important;
+  background: hsla(75 20% 93% / 0.92) !important;
   color: hsl(var(--text-tertiary)) !important;
-  font-size: var(--font-size-xs) !important;
+  font-family: var(--font-mono);
+  font-size: 10px !important;
+}
+
+[data-theme='dark'] .leaflet-control-attribution {
+  background: hsla(153 21% 11% / 0.9) !important;
 }
 
 .leaflet-control-attribution a {
@@ -384,9 +565,10 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
 
 .leaflet-control-zoom {
   background: hsl(var(--background-card)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--hairline-strong) !important;
+  border-radius: var(--radius-sm) !important;
   box-shadow: var(--shadow-map-control) !important;
+  overflow: hidden;
 }
 
 .leaflet-control-zoom a {
@@ -394,20 +576,19 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
   color: hsl(var(--text-primary)) !important;
   border: none !important;
   border-radius: 0 !important;
-  width: 36px !important;
-  height: 36px !important;
-  line-height: 36px !important;
-  font-size: 18px !important;
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  font-size: 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all var(--duration-fast) var(--ease-out) !important;
+  transition: background var(--duration-fast) var(--ease-out) !important;
 }
 
 .leaflet-control-zoom a:hover {
   background: hsl(var(--background-accent)) !important;
   color: hsl(var(--text-primary)) !important;
-  transform: scale(1.05);
 }
 
 .leaflet-bar :hover {
@@ -441,7 +622,7 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -472,7 +653,7 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: hsl(var(--border-hover));
   border-radius: var(--radius-sm);
 }
 
@@ -498,7 +679,6 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
 
 /* ===== Job Feed Editor helpers ===== */
 
-/* contentEditable placeholder */
 [data-placeholder]:empty:before,
 [data-placeholder]:empty:focus:before,
 [data-placeholder][data-empty="true"]:before {
@@ -507,17 +687,44 @@ h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); t
   pointer-events: none;
 }
 
-/* Mention chip inserted by @autocomplete (inline styles also applied in JS) */
 .mention-chip {
-  background: hsl(210 20% 25%);
-  color: hsl(var(--teal));
+  background: hsl(var(--background-accent));
+  color: hsl(var(--text-primary));
   border-radius: var(--radius-sm);
   padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
   font-weight: var(--font-weight-medium);
 }
 
-/* Drag-over state for attachment drop zones */
 .drag-over {
   border-color: hsl(var(--primary)) !important;
   background: hsl(var(--background-accent)) !important;
+}
+
+/* ===== Paper grain (very subtle, brand texture) ===== */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image:
+    radial-gradient(hsl(var(--text-primary) / 0.035) 0.5px, transparent 0.5px),
+    radial-gradient(hsl(var(--text-primary) / 0.025) 0.5px, transparent 0.5px);
+  background-size: 4px 4px, 7px 7px;
+  background-position: 0 0, 2px 3px;
+  mix-blend-mode: multiply;
+}
+
+[data-theme='dark'] body::before {
+  opacity: 0.18;
+  mix-blend-mode: screen;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }

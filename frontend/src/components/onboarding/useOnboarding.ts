@@ -115,7 +115,7 @@ const SALES_STEPS: OnboardingStep[] = [
     id: 'add-lead',
     title: 'Add a lead',
     description:
-      'Capture a name, address and phone number in under a minute. RoofPro scores the property against recent storms.',
+      'Capture a name, address and phone number in under a minute. AUCTUM scores the property against recent storms.',
     route: '/leads/new',
     routeLabel: 'Leads → New lead',
     icon: 'lead',
@@ -470,3 +470,4 @@ export function useOnboarding(options: UseOnboardingOptions = {}): UseOnboarding
 }
 
 export default useOnboarding;
+

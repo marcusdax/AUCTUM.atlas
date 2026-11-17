@@ -405,13 +405,13 @@ const WebhookForm: React.FC<WebhookFormProps> = ({
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://your-app.com/api/webhooks/roofpro"
+          placeholder="https://your-app.com/api/webhooks/auctum"
           className="input w-full"
         />
         <p className="mt-1 text-xs text-text-tertiary">
           {isEdit
             ? 'Update the endpoint that will receive webhook events.'
-            : 'This is the endpoint that RoofPro will POST to when events occur.'}
+            : 'This is the endpoint that AUCTUM will POST to when events occur.'}
         </p>
       </div>
 
@@ -983,3 +983,5 @@ const IntegrationsSettings: React.FC = () => {
 };
 
 export default IntegrationsSettings;
+
+

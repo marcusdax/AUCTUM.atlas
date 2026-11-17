@@ -200,6 +200,8 @@ async function main() {
           localStorage.setItem('accessToken', ${JSON.stringify(auth.accessToken)});
           localStorage.setItem('refreshToken', ${JSON.stringify(auth.refreshToken || '')});
           localStorage.setItem('roofpro.onboarding.v1', JSON.stringify({ version: 1, completed: true, skipped: true, lastStep: 0 }));
+          localStorage.setItem('roofpro.install.dismissed', 'true');
+          localStorage.setItem('theme', 'light');
           return JSON.stringify({ href: location.href, keys: Object.keys(localStorage), store: (localStorage.getItem('roofpro-auth') || '').slice(0, 120) });
         })()`,
         returnByValue: true,
@@ -291,3 +293,4 @@ main().catch((err) => {
   console.error('[shots] FAILED:', err.message);
   process.exit(1);
 });
+
