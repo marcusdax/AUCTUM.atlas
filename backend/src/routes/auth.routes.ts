@@ -14,12 +14,14 @@ import { prisma } from '../prisma';
 import { cacheDel } from '../config/redis';
 import { authMiddleware, requireRole, AuthRequest } from '../middleware/auth';
 import bcrypt from 'bcryptjs';
+import { loginLimiter, refreshLimiter, registerLimiter } from '../middleware/authLimits';
 
 const router = Router();
 
 // POST /auth/register
 router.post(
   '/register',
+  registerLimiter,
   [
     body('email').isEmail(),
     body('password').isLength({ min: 8 }),
@@ -51,6 +53,7 @@ router.post(
 // POST /auth/login
 router.post(
   '/login',
+  loginLimiter,
   [
     body('email').isEmail(),
     body('password').notEmpty(),
@@ -91,6 +94,7 @@ router.post(
 // POST /auth/refresh
 router.post(
   '/refresh',
+  refreshLimiter,
   [body('refreshToken').notEmpty()],
   async (req, res, next) => {
     try {

@@ -24,7 +24,7 @@ interface JwtPayload {
   exp: number;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'roofpro-crm-super-secret-key-change-in-production';
+import { JWT_SECRET } from '../config/secrets';
 
 export const authMiddleware = async (
   req: AuthRequest,

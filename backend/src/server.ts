@@ -9,6 +9,8 @@
  * - Prisma + PostgreSQL for all data
  */
 
+// Load .env before any module reads process.env (ES imports are evaluated first).
+import 'dotenv/config';
 import { createServer } from 'http';
 import path from 'path';
 import express from 'express';
@@ -23,6 +25,9 @@ import { prisma } from './prisma';
 import jwt from 'jsonwebtoken';
 
 import v1Router from './routes/index';
+import { JWT_SECRET } from './config/secrets';
+import { originChecker } from './config/origins';
+import { SERVABLE_UPLOAD_EXTENSIONS } from './middleware/upload';
 import { authMiddleware, AuthRequest } from './middleware/auth';
 import fs from 'fs';
 
@@ -66,13 +71,12 @@ const server = createServer(app);
 // ─── Socket.IO ───────────────────────────────────────────
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004').split(',').map(s => s.trim());
 const allowTunnelCors = process.env.ALLOW_TUNNEL_CORS === 'true';
-const corsOriginOption: cors.CorsOptions['origin'] = allowTunnelCors
-  ? (origin, callback) => callback(null, true)
-  : allowedOrigins;
+// Tunnel mode admits HTTPS quick-tunnel origins only (config/origins.ts), never any site.
+const corsOriginOption: cors.CorsOptions['origin'] = originChecker(allowedOrigins, allowTunnelCors);
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: allowTunnelCors ? true : allowedOrigins,
+    origin: originChecker(allowedOrigins, allowTunnelCors),
     credentials: true,
   },
 });
@@ -127,7 +131,23 @@ const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadDir));
+// Serve only known document/media extensions, never sniffed: an uploaded file must
+// not be able to run as HTML or SVG script on the app's own origin.
+app.use('/uploads', (req, res, next) => {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(req.path);
+  } catch {
+    return res.status(400).json({ error: 'Bad file path', code: 'BAD_PATH' });
+  }
+  const ext = path.extname(decoded).toLowerCase();
+  if (!SERVABLE_UPLOAD_EXTENSIONS.has(ext)) {
+    return res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
+  }
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
+app.use('/uploads', express.static(uploadDir, { dotfiles: 'deny', index: false }));
 
 // Request logging
 app.use((req, _res, next) => {
@@ -146,7 +166,7 @@ io.on('connection', (socket) => {
   const token = socket.handshake.auth?.token;
   if (token) {
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'roofpro-crm-super-secret-key-change-in-production') as {
+      const payload = jwt.verify(token, JWT_SECRET) as {
         userId: string;
         companyId: string;
       };

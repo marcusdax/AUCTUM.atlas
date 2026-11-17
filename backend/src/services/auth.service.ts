@@ -2,8 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'roofpro-crm-super-secret-key-change-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'roofpro-crm-refresh-secret-key-change-in-production';
+import { JWT_SECRET, JWT_REFRESH_SECRET } from '../config/secrets';
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
