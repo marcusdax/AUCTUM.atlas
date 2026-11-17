@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/design-tokens.schema.json",
+  "title": "ORBITAL INTELLIGENCE Design Tokens",
+  "type": "object",
+  "properties": {
+    "color": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "string",
+          "default": "hsl(216 33% 6%)",
+          "description": "Deep near-black/navy spatial canvas"
+        },
+        "background-elevated": {
+          "type": "string",
+          "default": "hsl(221 33% 11%)",
+          "description": "Navy panel elevation"
+        },
+        "background-card": {
+          "type": "string",
+          "default": "hsl(223 32% 15%)",
+          "description": "Glass-metal panel background"
+        },
+        "background-accent": {
+          "type": "string",
+          "default": "hsl(227 45% 21%)",
+          "description": "Controlled accent for AI/system emphasis"
+        },
+        "text-primary": {
+          "type": "string",
+          "default": "hsl(210 30% 97%)",
+          "description": "Primary text on dark background"
+        },
+        "text-secondary": {
+          "type": "string",
+          "default": "hsl(210 23% 60%)",
+          "description": "Secondary text"
+        },
+        "text-tertiary": {
+          "type": "string",
+          "default": "hsl(210 15% 40%)",
+          "description": "Tertiary/dimmed text"
+        },
+        "text-disabled": {
+          "type": "string",
+          "default": "hsl(210 11% 29%)",
+          "description": "Disabled text"
+        },
+        "primary": {
+          "type": "string",
+          "default": "hsl(217 91% 53%)",
+          "description": "Cyan/ice-blue intelligence signals"
+        },
+        "primary-hover": {
+          "type": "string",
+          "default": "hsl(221 83% 53%)",
+          "description": "Primary hover state"
+        },
+        "secondary": {
+          "type": "string",
+          "default": "hsl(255 80% 60%)",
+          "description": "Violet secondary intelligence layer"
+        },
+        "accent": {
+          "type": "string",
+          "default": "hsl(330 85% 60%)",
+          "description": "Controlled magenta for AI/system emphasis"
+        },
+        "border": {
+          "type": "string",
+          "default": "hsl(210 18% 22%)",
+          "description": "Technical grid border"
+        },
+        "border-hover": {
+          "type": "string",
+          "default": "hsl(210 13% 30%)",
+          "description": "Border hover state"
+        },
+        "severity": {
+          "type": "object",
+          "properties": {
+            "extreme": {
+              "type": "string",
+              "default": "hsl(0 90% 55%)",
+              "description": "Extreme severity (red)"
+            },
+            "severe": {
+              "type": "string",
+              "default": "hsl(25 80% 55%)",
+              "description": "Severe severity (orange-red)"
+            },
+            "moderate": {
+              "type": "string",
+              "default": "hsl(40 90% 50%)",
+              "description": "Moderate severity (amber)"
+            },
+            "minor": {
+              "type": "string",
+              "default": "hsl(217 91% 53%)",
+              "description": "Minor severity (cyan/primary)"
+            },
+            "unknown": {
+              "type": "string",
+              "default": "hsl(210 11% 29%)",
+              "description": "Unknown severity (text-disabled)"
+            }
+          }
+        },
+        "severity-bg": {
+          "type": "object",
+          "properties": {
+            "extreme": {
+              "type": "string",
+              "default": "hsla(0 90% 55% / 0.15)",
+              "description": "Extreme severity background tint"
+            },
+            "severe": {
+              "type": "string",
+              "default": "hsla(25 80% 55% / 0.15)",
+              "description": "Severe severity background tint"
+            },
+            "moderate": {
+              "type": "string",
+              "default": "hsla(40 90% 50% / 0.15)",
+              "description": "Moderate severity background tint"
+            },
+            "minor": {
+              "type": "string",
+              "default": "hsla(217 91% 53% / 0.15)",
+              "description": "Minor severity background tint"
+            }
+          }
+        }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "properties": {
+        "font-family": {
+          "type": "string",
+          "default": "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          "description": "Primary font for headings and UI elements"
+        },
+        "font-family-mono": {
+          "type": "string",
+          "default": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          "description": "Secondary font for body text and data"
+        },
+        "font-weight-regular": {
+          "type": "string",
+          "default": "400",
+          "description": "Regular font weight"
+        },
+        "font-weight-medium": {
+          "type": "string",
+          "default": "500",
+          "description": "Medium font weight"
+        },
+        "font-weight-semibold": {
+          "type": "string",
+          "default": "600",
+          "description": "Semi-bold font weight"
+        },
+        "font-weight-bold": {
+          "type": "string",
+          "default": "700",
+          "description": "Bold font weight"
+        },
+        "line-height-tight": {
+          "type": "string",
+          "default": "1.25",
+          "description": "Tight line height for headings"
+        },
+        "line-height-normal": {
+          "type": "string",
+          "default": "1.5",
+          "description": "Normal line height"
+        },
+        "line-height-loose": {
+          "type": "string",
+          "default": "1.75",
+          "description": "Loose line height"
+        }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "properties": {
+        "0": {
+          "type": "string",
+          "default": "0",
+          "description": "Zero spacing"
+        },
+        "1": {
+          "type": "string",
+          "default": "0.25rem",
+          "description": "4px"
+        },
+        "2": {
+          "type": "string",
+          "default": "0.5rem",
+          "description": "8px"
+        },
+        "3": {
+          "type": "string",
+          "default": "0.75rem",
+          "description": "12px"
+        },
+        "4": {
+          "type": "string",
+          "default": "1rem",
+          "description": "16px"
+        },
+        "5": {
+          "type": "string",
+          "default": "1.25rem",
+          "description": "20px"
+        },
+        "6": {
+          "type": "string",
+          "default": "1.5rem",
+          "description": "24px"
+        },
+        "7": {
+          "type": "string",
+          "default": "1.75rem",
+          "description": "28px"
+        },
+        "8": {
+          "type": "string",
+          "default": "2rem",
+          "description": "32px"
+        },
+        "9": {
+          "type": "string",
+          "default": "2.25rem",
+          "description": "36px"
+        },
+        "10": {
+          "type": "string",
+          "default": "2.5rem",
+          "description": "40px"
+        },
+        "12": {
+          "type": "string",
+          "default": "3rem",
+          "description": "48px"
+        },
+        "14": {
+          "type": "string",
+          "default": "3.5rem",
+          "description": "56px"
+        },
+        "16": {
+          "type": "string",
+          "default": "4rem",
+          "description": "64px"
+        }
+      }
+    },
+    "radius": {
+      "type": "object",
+      "properties": {
+        "sm": {
+          "type": "string",
+          "default": "0.25rem",
+          "description": "4px border radius"
+        },
+        "md": {
+          "type": "string",
+          "default": "0.5rem",
+          "description": "8px border radius"
+        },
+        "lg": {
+          "type": "string",
+          "default": "0.75rem",
+          "description": "12px border radius"
+        },
+        "xl": {
+          "type": "string",
+          "default": "1rem",
+          "description": "16px border radius"
+        },
+        "full": {
+          "type": "string",
+          "default": "9999px",
+          "description": "Full border radius (circle)"
+        }
+      }
+    },
+    "shadows": {
+      "type": "object",
+      "properties": {
+        "sm": {
+          "type": "string",
+          "default": "0 1px 2px rgba(0, 0, 0, 0.05)",
+          "description": "Small shadow"
+        },
+        "default": {
+          "type": "string",
+          "default": "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+          "description": "Default shadow"
+        },
+        "md": {
+          "type": "string",
+          "default": "0 4px 6px rgba(0, 0, 0, 0.1)",
+          "description": "Medium shadow"
+        },
+        "lg": {
+          "type": "string",
+          "default": "0 10px 15px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)",
+          "description": "Large shadow"
+        },
+        "xl": {
+          "type": "string",
+          "default": "0 20px 25px rgba(0, 0, 0, 0.25), 0 8px 10px rgba(0, 0, 0, 0.15)",
+          "description": "Extra large shadow"
+        },
+        "map-control": {
+          "type": "string",
+          "default": "0 2px 12px rgba(0, 0, 0, 0.4)",
+          "description": "Map control shadow"
+        }
+      }
+    },
+    "animation": {
+      "type": "object",
+      "properties": {
+        "duration-fast": {
+          "type": "string",
+          "default": "150ms",
+          "description": "Fast animation duration"
+        },
+        "duration-normal": {
+          "type": "string",
+          "default": "250ms",
+          "description": "Normal animation duration"
+        },
+        "duration-slow": {
+          "type": "string",
+          "default": "400ms",
+          "description": "Slow animation duration"
+        },
+        "ease-out": {
+          "type": "string",
+          "default": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+          "description": "Ease out timing function"
+        },
+        "ease-in-out": {
+          "type": "string",
+          "default": "cubic-bezier(0.4, 0, 0.2, 1)",
+          "description": "Ease in-out timing function"
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "header-height": {
+          "type": "string",
+          "default": "4rem",
+          "description": "Header height"
+        },
+        "footer-height": {
+          "type": "string",
+          "default": "2.25rem",
+          "description": "Footer height"
+        },
+        "sidebar-width": {
+          "type": "string",
+          "default": "16rem",
+          "description": "Sidebar width (256px)"
+        },
+        "sidebar-width-collapsed": {
+          "type": "string",
+          "default": "4rem",
+          "description": "Collapsed sidebar width (64px)"
+        }
+      }
+    }
+  }
+}

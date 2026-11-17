@@ -1,0 +1,28 @@
+# Dependencies / build output
+node_modules/
+**/node_modules/
+dist/
+build/
+storybook-static/
+coverage/
+.loki/
+.playwright-mcp/
+.sixth/
+*.log
+logs/
+**/logs/
+backend/uploads/
+uploads/
+user_input_files/
+frontend/bundle-analysis.html
+frontend/*.timestamp-*.mjs
+# Secrets & local env
+.env
+.env.local
+*.local
+backend/test-audit-creds.json
+# OS
+.DS_Store
+Thumbs.db
+# Stale duplicate checkout kept for history only
+atlas-helios-platform/

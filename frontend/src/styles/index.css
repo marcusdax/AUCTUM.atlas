@@ -1,0 +1,523 @@
+/**
+ * RoofPro CRM — Unified Design System
+ * Consolidates the former styles/index.css (Tailwind/HSL) and
+ * styles/design-system.css (raw --c- tokens) into a single, coherent
+ * HSL-based token system.
+ *
+ * Theme scheme
+ *   - Dark is the default theme. All color tokens live on :root so the
+ *     correct palette is visible on first paint (no JS required) and while
+ *     the toggle resolves. When the mode is "dark" we leave the :root values
+ *     untouched.
+ *   - Light mode overrides are applied under [data-theme="light"].
+ *   - components/Layout.tsx sets document.documentElement.setAttribute('data-theme', 'dark'|'light').
+ *     The broken class-based toggle (.light / .light-theme) is intentionally removed.
+ *
+ * Backward compatibility
+ *   - Every hsl(var(--...)) token referenced across the app is preserved.
+ *   - The legacy --c-* aliases (used by component CSS/JS via plain var(--c-...))
+ *     resolve to the live HSL tokens, so they switch with the theme automatically.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Design Tokens ===== */
+
+:root {
+  /* ===== Color: Surface / background tier ===== */
+  --background: 216 33% 6%;            /* #0a0e14 */
+  --background-elevated: 221 33% 11%;  /* #131926 */
+  --background-card: 223 32% 15%;      /* #1a2133 */
+  --background-accent: 227 45% 21%;    /* #1e294f */
+  --surface: 223 32% 15%;             /* alias of --background-card */
+
+  /* ===== Color: Text levels ===== */
+  --text-primary: 210 30% 97%;        /* #f8fafc */
+  --text-secondary: 210 23% 60%;     /* #94a3b8 */
+  --text-tertiary: 210 15% 40%;     /* #64748b */
+  --text-disabled: 210 11% 29%;      /* #475569 */
+
+  /* ===== Color: Palette (hue buckets) ===== */
+  --primary: 217 91% 53%;            /* blue */
+  --primary-hover: 221 83% 53%;
+  --teal: 191 90% 50%;
+  --amber: 38 92% 50%;
+  --amber-hover: 38 89% 45%;
+  --emerald: 150 60% 50%;
+  --emerald-hover: 150 54% 46%;
+  --red: 0 90% 55%;
+  --red-hover: 0 84% 53%;
+  --orange: 25 95% 50%;             /* #f97316 */
+  --purple: 255 80% 60%;
+  --pink: 330 85% 60%;
+
+  /* ===== Color: Semantic aliases (resolved colors for direct CSS use) ===== */
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-success: hsl(var(--emerald));
+  --color-success-hover: hsl(var(--emerald-hover));
+  --color-warning: hsl(var(--amber));
+  --color-warning-hover: hsl(var(--amber-hover));
+  --color-danger: hsl(var(--red));
+  --color-danger-hover: hsl(var(--red-hover));
+  --color-info: hsl(var(--teal));
+  --color-destructive: hsl(var(--red));
+  --color-destructive-hover: hsl(var(--red-hover));
+  --color-border: hsl(var(--border));
+  --color-border-hover: hsl(var(--border-hover));
+
+  /* ===== Color: Border & dividers ===== */
+  --border: 210 18% 22%;
+  --border-hover: 210 13% 30%;
+
+  /* ===== Color: Severity colors ===== */
+  --severity-extreme: 0 90% 55%;
+  --severity-severe: 25 80% 55%;
+  --severity-moderate: 40 90% 50%;
+  --severity-minor: 217 91% 53%;
+  --severity-unknown: 210 11% 29%;        /* = text-disabled */
+
+  /* Severity tint backgrounds (theme-aware via alpha on the HSL severity token) */
+  --severity-extreme-bg: hsla(var(--severity-extreme) / 0.15);
+  --severity-severe-bg: hsla(var(--severity-severe) / 0.15);
+  --severity-moderate-bg: hsla(var(--severity-moderate) / 0.15);
+  --severity-minor-bg: hsla(var(--severity-minor) / 0.15);
+
+  /* ===== Legacy --c-* aliases (component CSS/JS compatibility) ===== */
+  --c-bg: hsl(var(--background));
+  --c-bg-elevated: hsl(var(--background-elevated));
+  --c-bg-card: hsl(var(--background-card));
+  --c-bg-accent: hsl(var(--background-accent));
+  --c-text-primary: hsl(var(--text-primary));
+  --c-text-secondary: hsl(var(--text-secondary));
+  --c-text-tertiary: hsl(var(--text-tertiary));
+  --c-text-disabled: hsl(var(--text-disabled));
+  --c-blue: hsl(var(--primary));
+  --c-blue-hover: hsl(var(--primary-hover));
+  --c-teal: hsl(var(--teal));
+  --c-amber: hsl(var(--amber));
+  --c-amber-hover: hsl(var(--amber-hover));
+  --c-emerald: hsl(var(--emerald));
+  --c-emerald-hover: hsl(var(--emerald-hover));
+  --c-red: hsl(var(--red));
+  --c-red-hover: hsl(var(--red-hover));
+  --c-orange: hsl(var(--orange));
+  --c-purple: hsl(var(--purple));
+  --c-pink: hsl(var(--pink));
+  --c-severity-extreme: hsl(var(--severity-extreme));
+  --c-severity-severe: hsl(var(--severity-severe));
+  --c-severity-moderate: hsl(var(--severity-moderate));
+  --c-severity-minor: hsl(var(--severity-minor));
+  --c-severity-unknown: hsl(var(--severity-unknown));
+  --c-sev-extreme-bg: hsla(var(--severity-extreme) / 0.15);
+  --c-sev-severe-bg: hsla(var(--severity-severe) / 0.15);
+  --c-sev-moderate-bg: hsla(var(--severity-moderate) / 0.15);
+  --c-sev-minor-bg: hsla(var(--severity-minor) / 0.15);
+  --c-border: hsl(var(--border));
+  --c-border-hover: hsl(var(--border-hover));
+
+  /* ===== Typography ===== */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.625rem;     /* 10px */
+  --font-size-sm: 0.75rem;      /* 12px */
+  --font-size-md: 0.875rem;     /* 14px */
+  --font-size-base: 1rem;       /* 16px */
+  --font-size-lg: 1.125rem;     /* 18px */
+  --font-size-xl: 1.25rem;      /* 20px */
+  --font-size-2xl: 1.5rem;      /* 24px */
+  --font-size-3xl: 1.875rem;    /* 30px */
+  --font-size-4xl: 2.25rem;     /* 36px */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-loose: 1.75;
+
+  /* ===== ORBITAL INTELLIGENCE Additional Tokens ===== */
+  --intelligence-cyan: 217 91% 53%;     /* Primary intelligence signal */
+  --intelligence-violet: 255 80% 60%;   /* Secondary intelligence layer */
+  --intelligence-magenta: 330 85% 60%;  /* AI/system emphasis */
+
+  /* ===== Animation easings for HUD-style motion ===== */
+  --ease-out-exp: cubic-bezier(0.15, 0.4, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===== State indicators ===== */
+  --state-live: hsl(217 91% 53%);   /* Cyan - live data */
+  --state-syncing: hsl(210 23% 60%); /* Amber - syncing */
+  --state-stale: hsl(210 15% 40%);  /* Tertiary - stale data */
+  --state-degraded: hsl(25 80% 55%);/* Orange - degraded mode */
+  --state-offline: hsl(210 11% 29%);/* Disabled - offline */
+
+  /* ===== Spacing (4px base unit) ===== */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-7: 1.75rem;   /* 28px */
+  --space-8: 2rem;      /* 32px */
+  --space-9: 2.25rem;   /* 36px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-14: 3.5rem;   /* 56px */
+  --space-16: 4rem;     /* 64px */
+
+  /* ===== Border radius ===== */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;     /* 16px */
+  --radius-full: 9999px;
+
+  /* ===== Shadows (subtle elevation) ===== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.25), 0 8px 10px rgba(0, 0, 0, 0.15);
+  --shadow-map-control: 0 2px 12px rgba(0, 0, 0, 0.4);
+
+  /* ===== Animation timing & easings ===== */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ===== Layout ===== */
+  --header-height: 4rem;
+  --footer-height: 2.25rem;
+  --sidebar-width: 16rem;     /* 256px (Tailwind w-64) */
+  --sidebar-width-collapsed: 4rem; /* 64px (Tailwind w-16) */
+}
+
+/* ===== Light theme ===== */
+[data-theme="light"] {
+  --background: 0 0% 100%;
+  --background-elevated: 210 20% 97%;
+  --background-card: 210 20% 96%;
+  --background-accent: 210 30% 93%;
+  --surface: 210 20% 96%;
+  --text-primary: 223 30% 10%;
+  --text-secondary: 210 20% 40%;
+  --text-tertiary: 210 11% 50%;
+  --text-disabled: 210 8% 60%;
+  --severity-unknown: 210 15% 50%;
+  --border: 210 20% 90%;
+  --border-hover: 210 20% 85%;
+}
+
+/* ===== Base styles ===== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  background-color: hsl(var(--background));
+  color: hsl(var(--text-primary));
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Typography scale ===== */
+
+h1 { font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); }
+h2 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); }
+h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); line-height: var(--line-height-tight); }
+h4 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); line-height: var(--line-height-normal); }
+h5 { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.05em; }
+h6 { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ===== Utility classes ===== */
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ===== Cards ===== */
+
+.card {
+  @apply bg-[hsl(var(--background-card))] border border-[hsl(var(--border))] rounded-xl p-6 shadow-sm;
+}
+
+/* ===== Buttons ===== */
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))] focus:ring-primary;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-primary-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
+}
+
+.btn-secondary {
+  @apply bg-[hsl(var(--background-elevated))] text-text-primary border border-[hsl(var(--border))] hover:bg-[hsl(var(--background-accent))];
+}
+
+.btn-ghost {
+  @apply bg-transparent text-text-secondary hover:bg-[hsl(var(--background-card))];
+}
+
+.btn-sm { @apply h-8 px-3 text-xs; }
+.btn-md { @apply h-10 px-4 text-sm; }
+.btn-lg { @apply h-12 px-5 text-base; }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Badges ===== */
+
+.badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+.badge-extreme { background: var(--c-sev-extreme-bg); color: var(--c-severity-extreme); }
+.badge-severe { background: var(--c-sev-severe-bg); color: var(--c-severity-severe); }
+.badge-moderate { background: var(--c-sev-moderate-bg); color: var(--c-severity-moderate); }
+.badge-minor { background: var(--c-sev-minor-bg); color: var(--c-severity-minor); }
+.badge-info { background: hsla(var(--primary) / 0.15); color: hsl(var(--primary)); }
+
+/* ===== Inputs ===== */
+
+.input {
+  @apply w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm text-text-primary placeholder-[hsl(var(--text-tertiary))] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+}
+
+/* ===== Leaflet overrides ===== */
+
+.leaflet-container {
+  background: hsl(var(--background));
+  color: hsl(var(--text-primary));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  background: hsl(var(--background-card));
+  color: hsl(var(--text-primary));
+  border-radius: var(--radius-lg);
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-xl);
+}
+
+.leaflet-popup-tip {
+  background: hsl(var(--background-card));
+  border: 1px solid hsl(var(--border));
+}
+
+.leaflet-popup-content {
+  margin: var(--space-3) !important;
+  font-size: var(--font-size-sm);
+}
+
+.leaflet-popup-content h4 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: hsl(var(--text-primary));
+  margin-bottom: var(--space-2);
+}
+
+.leaflet-popup-content p {
+  color: hsl(var(--text-secondary));
+  margin-bottom: var(--space-1);
+}
+
+.leaflet-popup-content button {
+  background: hsl(var(--primary));
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+}
+
+.leaflet-control-attribution {
+  background: hsla(216 33% 6% / 0.85) !important;
+  color: hsl(var(--text-tertiary)) !important;
+  font-size: var(--font-size-xs) !important;
+}
+
+.leaflet-control-attribution a {
+  color: hsl(var(--primary)) !important;
+}
+
+.leaflet-control-zoom {
+  background: hsl(var(--background-card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-map-control) !important;
+}
+
+.leaflet-control-zoom a {
+  background: hsl(var(--background-card)) !important;
+  color: hsl(var(--text-primary)) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: hsl(var(--background-accent)) !important;
+  color: hsl(var(--text-primary)) !important;
+  transform: scale(1.05);
+}
+
+.leaflet-bar :hover {
+  background: hsl(var(--background-accent)) !important;
+  color: hsl(var(--text-primary)) !important;
+}
+
+.leaflet-interactive {
+  transition: fill-opacity 0.2s ease;
+}
+
+.leaflet-interactive:hover {
+  fill-opacity: 0.3 !important;
+  opacity: 0.6 !important;
+}
+
+/* ===== Keyframe animations ===== */
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* ===== Animation utilities ===== */
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 3s ease-in-out infinite;
+}
+
+/* ===== Scrollbar ===== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--text-tertiary));
+}
+
+/* ===== Responsive helpers ===== */
+
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: block !important; }
+  .sidebar-desktop { display: none !important; }
+  .sidebar-mobile { display: block !important; }
+}
+
+@media (min-width: 769px) {
+  .desktop-only { display: block !important; }
+  .mobile-only { display: none !important; }
+  .sidebar-mobile { display: none !important; }
+  .sidebar-desktop { display: block !important; }
+}
+
+/* ===== Job Feed Editor helpers ===== */
+
+/* contentEditable placeholder */
+[data-placeholder]:empty:before,
+[data-placeholder]:empty:focus:before,
+[data-placeholder][data-empty="true"]:before {
+  content: attr(data-placeholder);
+  color: hsl(var(--text-tertiary));
+  pointer-events: none;
+}
+
+/* Mention chip inserted by @autocomplete (inline styles also applied in JS) */
+.mention-chip {
+  background: hsl(210 20% 25%);
+  color: hsl(var(--teal));
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Drag-over state for attachment drop zones */
+.drag-over {
+  border-color: hsl(var(--primary)) !important;
+  background: hsl(var(--background-accent)) !important;
+}
