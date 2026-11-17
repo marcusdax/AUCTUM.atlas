@@ -1,0 +1,217 @@
+/**
+ * ui-shots.mjs — dependency-free UI screenshot harness (Chrome DevTools Protocol).
+ *
+ * Boots the installed Chrome in headless mode, signs in through the real API,
+ * injects the JWT into localStorage, then captures PNGs of the key RoofPro CRM
+ * screens. Used as launch evidence; no npm packages required (Node 20+ global
+ * fetch + WebSocket).
+ *
+ * Usage:
+ *   node scripts/ui-shots.mjs [--base http://localhost:3000] [--api http://localhost:5000]
+ *                             [--out runs/shots] [--email demo@roofprocrm.com] [--password RoofPro!2026]
+ */
+import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync, rmSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+
+const args = process.argv.slice(2);
+const arg = (name, fallback) => {
+  const i = args.indexOf(name);
+  return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
+};
+
+const BASE = arg('--base', 'http://localhost:3000');
+const API = arg('--api', 'http://localhost:5000');
+const OUT = resolve(arg('--out', 'runs/shots'));
+const EMAIL = arg('--email', 'demo@roofprocrm.com');
+const PASSWORD = arg('--password', 'RoofPro!2026');
+const PORT = 9222;
+const VIEWPORT = { width: 1440, height: 900 };
+
+const CHROME_CANDIDATES = [
+  process.env.CHROME_PATH,
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+].filter(Boolean);
+
+function findBrowser() {
+  for (const p of CHROME_CANDIDATES) {
+    try {
+      if (statSync(p).isFile()) return p;
+    } catch {}
+  }
+  throw new Error('No Chrome/Edge binary found. Set CHROME_PATH.');
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function waitForJson(url, timeoutMs = 15000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return await r.json();
+    } catch {}
+    await sleep(250);
+  }
+  throw new Error(`Timed out waiting for ${url}`);
+}
+
+async function login() {
+  const r = await fetch(`${API}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+  });
+  if (!r.ok) throw new Error(`login failed: HTTP ${r.status} ${await r.text()}`);
+  const data = await r.json();
+  if (!data.accessToken) throw new Error('login response missing accessToken');
+  return data;
+}
+
+class Cdp {
+  constructor(ws) {
+    this.ws = ws;
+    this.id = 0;
+    this.pending = new Map();
+    ws.addEventListener('message', (ev) => {
+      let msg;
+      try {
+        msg = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (msg.id && this.pending.has(msg.id)) {
+        const { resolve, reject } = this.pending.get(msg.id);
+        this.pending.delete(msg.id);
+        if (msg.error) reject(new Error(msg.error.message || 'CDP error'));
+        else resolve(msg.result);
+      }
+    });
+  }
+  send(method, params = {}) {
+    const id = ++this.id;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.ws.send(JSON.stringify({ id, method, params }));
+      setTimeout(() => {
+        if (this.pending.has(id)) {
+          this.pending.delete(id);
+          reject(new Error(`CDP timeout: ${method}`));
+        }
+      }, 30000);
+    });
+  }
+}
+
+async function main() {
+  mkdirSync(OUT, { recursive: true });
+  const auth = await login();
+  console.log(`[shots] authenticated as ${auth.user?.email} (${auth.user?.role})`);
+
+  const browserPath = findBrowser();
+  const profileDir = join(tmpdir(), `roofpro-shots-${Date.now()}`);
+  mkdirSync(profileDir, { recursive: true });
+
+  const child = spawn(
+    browserPath,
+    [
+      '--headless=new',
+      '--disable-gpu',
+      '--hide-scrollbars',
+      '--no-first-run',
+      '--no-default-browser-check',
+      `--remote-debugging-port=${PORT}`,
+      `--user-data-dir=${profileDir}`,
+      `--window-size=${VIEWPORT.width},${VIEWPORT.height}`,
+      'about:blank',
+    ],
+    { stdio: 'ignore', detached: false }
+  );
+
+  const cleanup = () => {
+    try { child.kill(); } catch {}
+    try { rmSync(profileDir, { recursive: true, force: true }); } catch {}
+  };
+
+  try {
+    await waitForJson(`http://127.0.0.1:${PORT}/json/version`);
+    const target = await (
+      await fetch(`http://127.0.0.1:${PORT}/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT' })
+    ).json();
+
+    const ws = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((res, rej) => {
+      ws.addEventListener('open', res, { once: true });
+      ws.addEventListener('error', rej, { once: true });
+    });
+    const cdp = new Cdp(ws);
+    await cdp.send('Page.enable');
+    await cdp.send('Runtime.enable');
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: VIEWPORT.width,
+      height: VIEWPORT.height,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+
+    async function setAuthAndNavigate(path, name, waitMs = 3500) {
+      await cdp.send('Page.navigate', { url: `${BASE}${path}` });
+      await sleep(1200);
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => {
+          localStorage.setItem('accessToken', ${JSON.stringify(auth.accessToken)});
+          localStorage.setItem('refreshToken', ${JSON.stringify(auth.refreshToken || '')});
+          localStorage.setItem('roofpro.onboarding.v1', JSON.stringify({ version: 1, completed: true, skipped: true, lastStep: 0 }));
+          return true;
+        })()`,
+      });
+      await cdp.send('Page.navigate', { url: `${BASE}${path}` });
+      await sleep(waitMs);
+      const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      const file = join(OUT, `${name}.png`);
+      writeFileSync(file, Buffer.from(shot.data, 'base64'));
+      console.log(`[shots] saved ${file}`);
+    }
+
+    // Public page first (no auth needed)
+    await cdp.send('Page.navigate', { url: `${BASE}/login` });
+    await sleep(2500);
+    const loginShot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+    writeFileSync(join(OUT, '01-login.png'), Buffer.from(loginShot.data, 'base64'));
+    console.log(`[shots] saved ${join(OUT, '01-login.png')}`);
+
+    const pages = [
+      ['/dashboard', '02-dashboard'],
+      ['/storm-tracking', '03-storm-intelligence'],
+      ['/leads', '04-leads'],
+      ['/jobs', '05-jobs'],
+      ['/calendar', '06-calendar'],
+      ['/estimates', '07-estimates'],
+      ['/reports', '08-reports'],
+      ['/settings/ai', '09-ai-gateway'],
+    ];
+    for (const [path, name] of pages) {
+      try {
+        await setAuthAndNavigate(path, name);
+      } catch (err) {
+        console.error(`[shots] ${name} failed: ${err.message}`);
+      }
+    }
+    ws.close();
+    console.log(`[shots] done -> ${OUT}`);
+  } finally {
+    cleanup();
+  }
+}
+
+main().catch((err) => {
+  console.error('[shots] FAILED:', err.message);
+  process.exit(1);
+});

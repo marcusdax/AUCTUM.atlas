@@ -7,6 +7,7 @@ import App from './App';
 import { AuthProvider } from './components/auth/AuthProvider';
 import { SocketProvider } from './components/providers/SocketProvider';
 import { reportWebVitals } from './perf/metrics';
+import { registerServiceWorker } from './pwa/registerSW';
 import './index.css';
 import { ThemeProvider } from './ui/design/ThemeProvider';
 
@@ -48,3 +49,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 
 reportWebVitals();
+
+// PWA: registers /sw.js in production builds only; no-op in dev (and unsupported browsers).
+registerServiceWorker();

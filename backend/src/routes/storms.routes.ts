@@ -140,6 +140,9 @@ router.get('/nearby', async (req: AuthRequest, res, next) => {
  * GET /storms/:id — Get specific storm details
  */
 router.get('/:id', async (req: AuthRequest, res, next) => {
+  // `/storms/events` is a static collection route declared later in this file;
+  // without this guard `:id` would shadow it (pre-existing bug fixed in v1.1).
+  if (req.params.id === 'events') return next();
   try {
     // Check in-memory store first
     const storm = activeStorms.get(req.params.id);

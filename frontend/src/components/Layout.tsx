@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore, hasRole } from '../stores/authStore';
+import { OfflineBanner, InstallPrompt } from '../pwa';
+import { OnboardingTour } from './onboarding';
 import {
   LayoutDashboard,
   Users,
@@ -279,6 +281,11 @@ const Layout: React.FC = () => {
           </div>
         </footer>
       </div>
+
+      {/* PWA + adoption surfaces (self-contained, no props) */}
+      <OfflineBanner />
+      <InstallPrompt />
+      <OnboardingTour />
     </div>
   );
 };

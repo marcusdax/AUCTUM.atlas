@@ -1,0 +1,11 @@
+node_modules
+dist
+logs
+uploads
+coverage
+*.log
+.env
+.env.local
+test-*.mjs
+test-*.json
+e2e-test-file.txt

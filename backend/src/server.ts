@@ -179,6 +179,23 @@ app.use('/api/v1', v1Router);
 
 // ─── Error Handling ──────────────────────────────────────
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  // Body-parser errors happen before any router: answer with a client error, not a 500.
+  const parserError = err as Error & { type?: string; status?: number; statusCode?: number };
+  if (parserError.type === 'entity.parse.failed') {
+    return res.status(400).json({
+      error: 'Invalid JSON body',
+      code: 'INVALID_JSON',
+      timestamp: new Date().toISOString(),
+    });
+  }
+  if (parserError.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Request body too large',
+      code: 'PAYLOAD_TOO_LARGE',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   logger.error('Unhandled error', {
     error: err.message,
     stack: err.stack,

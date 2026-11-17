@@ -18,7 +18,16 @@
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm start",
     "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
-    "test": "cd backend && npm test && cd ../frontend && npm test"
+    "test": "cd backend && npm test && cd ../frontend && npm test",
+    "test:all": "npm --prefix backend test && npm --prefix frontend exec -- vitest run",
+    "seed:demo": "npm --prefix backend run seed:demo",
+    "launch": "powershell -ExecutionPolicy Bypass -File ./scripts/launch.ps1",
+    "stop": "powershell -ExecutionPolicy Bypass -File ./scripts/stop.ps1",
+    "smoke": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke.ps1",
+    "stack:up": "docker compose up -d --build",
+    "stack:down": "docker compose down",
+    "stack:logs": "docker compose logs -f --tail=120",
+    "stack:ps": "docker compose ps"
   },
   "keywords": [
     "roofing-crm",

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="RoofPro CRM">
+  <defs>
+    <linearGradient id="bgm192" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="roofm192" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60a5fa" />
+      <stop offset="1" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <!-- Full-bleed background: maskable safe zone keeps all glyph content inside the middle 80%. -->
+  <rect width="192" height="192" fill="url(#bgm192)" />
+  <path d="M46 106 L96 66 L146 106" fill="none" stroke="url(#roofm192)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M65 103 V138 H127 V103" fill="none" stroke="#e2e8f0" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="88" y="115" width="16" height="23" rx="3" fill="#60a5fa" />
+</svg>

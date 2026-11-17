@@ -50,6 +50,7 @@ const SettingsPage = lazy(() => import('./pages/Settings'));
 const IntegrationsSettings = lazy(() => import('./pages/settings/IntegrationsSettings'));
 const CompanySettings = lazy(() => import('./pages/settings/CompanySettings'));
 const UsersManagement = lazy(() => import('./pages/settings/UsersManagement'));
+const AIGatewaySettings = lazy(() => import('./pages/settings/AIGateway'));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
@@ -137,6 +138,7 @@ function App() {
             <Route path="company" element={<CompanySettings />} />
             <Route path="users" element={<UsersManagement />} />
             <Route path="integrations" element={<IntegrationsSettings />} />
+            <Route path="ai" element={<AIGatewaySettings />} />
           </Route>
 
           {/* Fallback */}

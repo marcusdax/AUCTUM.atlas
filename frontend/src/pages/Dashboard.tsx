@@ -14,6 +14,7 @@ import clsx from 'clsx';
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   Briefcase,
   CalendarDays,
   Calculator,
@@ -23,6 +24,7 @@ import {
   Map,
   MapPin,
   Plus,
+  Radar,
   TrendingDown,
   TrendingUp,
   Users,
@@ -406,6 +408,106 @@ const QuickActionBar: React.FC = () => {
   );
 };
 
+// ─── Quick Start: large-touch-target entry points for starters/small teams ──
+
+const QUICK_START_FOCUS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ' +
+  'focus-visible:ring-offset-background focus-visible:ring-primary';
+
+interface QuickStartAction {
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  path: string;
+}
+
+const QUICK_START_ACTIONS: QuickStartAction[] = [
+  {
+    label: 'Add lead',
+    description: 'Capture a new opportunity',
+    icon: <Plus size={22} />,
+    path: '/leads/new',
+  },
+  {
+    label: 'Schedule inspection',
+    description: 'Book a site visit',
+    icon: <CalendarDays size={22} />,
+    path: '/calendar',
+  },
+  {
+    label: 'Create estimate',
+    description: 'Send a branded quote',
+    icon: <Calculator size={22} />,
+    path: '/estimates',
+  },
+];
+
+const QuickStart: React.FC<{ firstName?: string }> = ({ firstName }) => {
+  const navigate = useNavigate();
+
+  return (
+    <section aria-labelledby="quick-start-heading" className="mb-6">
+      <div className="mb-3">
+        <h2 id="quick-start-heading" className="text-lg font-semibold text-text-primary">
+          Quick Start
+        </h2>
+        <p className="text-sm text-text-tertiary">
+          {firstName ? `Welcome back, ${firstName}. ` : 'Welcome back. '}
+          Get today moving in one tap.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {QUICK_START_ACTIONS.map((action) => (
+          <button
+            key={action.path}
+            type="button"
+            onClick={() => navigate(action.path)}
+            className={clsx(
+              'flex min-h-[76px] items-center gap-3 rounded-xl border border-border bg-[hsl(var(--background-card))] p-4 text-left',
+              'transition-colors hover:border-primary hover:bg-[hsl(var(--background-accent))]',
+              QUICK_START_FOCUS
+            )}
+          >
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+              aria-hidden="true"
+            >
+              {action.icon}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-text-primary">{action.label}</span>
+              <span className="block text-xs text-text-tertiary">{action.description}</span>
+            </span>
+          </button>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => navigate('/storm-tracking')}
+          className={clsx(
+            'flex min-h-[76px] items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4 text-left',
+            'transition-colors hover:border-primary hover:bg-primary/10',
+            QUICK_START_FOCUS
+          )}
+        >
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+            aria-hidden="true"
+          >
+            <Radar size={22} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold text-text-primary">Open Storm Intelligence</span>
+            <span className="block text-xs text-text-tertiary">See which homes were just hit</span>
+          </span>
+          <ArrowRight size={16} className="shrink-0 text-primary" aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+};
+
 // ─── Upcoming schedule: time-based color coding + quick-action buttons ─────
 
 const eventStatusVariant = (type?: string): BadgeVariant => {
@@ -737,13 +839,20 @@ const Dashboard: React.FC = () => {
   const stormEvents = stormEventsQuery.data?.data ?? [];
   const weatherAlerts = alertsQuery.data?.alerts ?? [];
 
+  // Quick Start only renders once the dashboard queries have data. (Queries use
+  // placeholder data, so this is effectively "not during the initial suspense paint".)
+  const dashboardDataReady = Boolean(jobsQuery.data && leadsQuery.data && estimatesQuery.data);
+
   return (
-    <DashboardCommandCenter
-      jobs={jobs}
-      leads={leads}
-      stormEvents={stormEvents}
-      weatherAlerts={weatherAlerts}
-    />
+    <div>
+      {dashboardDataReady && <QuickStart firstName={user?.firstName} />}
+      <DashboardCommandCenter
+        jobs={jobs}
+        leads={leads}
+        stormEvents={stormEvents}
+        weatherAlerts={weatherAlerts}
+      />
+    </div>
   );
 };
 

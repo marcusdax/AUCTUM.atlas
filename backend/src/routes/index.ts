@@ -18,6 +18,8 @@ import mapRoutes from './map.routes';
 import materialRoutes from './materials.routes';
 import subcontractorRoutes from './subcontractors.routes';
 import reportRoutes from './reports.routes';
+import aiRoutes from './ai.routes';
+import stormIntelRoutes from './stormIntel.routes';
 
 // Health check route (no auth required)
 const healthRouter = Router();
@@ -67,6 +69,10 @@ v1Router.use('/materials', materialRoutes);
 v1Router.use('/subcontractors', subcontractorRoutes);
 v1Router.use('/reports', reportRoutes);
 
+// AI gateway (FreeLLMAPI-compatible) + storm intelligence
+v1Router.use('/ai', aiRoutes);
+v1Router.use('/storm-intel', stormIntelRoutes);
+
 // Root endpoint
 v1Router.get('/', (req, res) => {
   res.json({
@@ -91,6 +97,16 @@ v1Router.get('/', (req, res) => {
       materials: '/api/v1/materials',
       subcontractors: '/api/v1/subcontractors',
       reports: '/api/v1/reports',
+      ai: '/api/v1/ai',
+      stormIntel: '/api/v1/storm-intel',
+    },
+    ai: {
+      status: '/api/v1/ai/status',
+      stormBrief: 'POST /api/v1/ai/storm-brief',
+      mapCopilot: 'POST /api/v1/ai/map-copilot',
+      leadInsights: 'POST /api/v1/ai/lead-insights',
+      providers: '/api/v1/ai/providers',
+      usage: '/api/v1/ai/usage',
     },
   });
 });

@@ -24,6 +24,8 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma/
 COPY --from=builder /app/dist ./dist
+# Source is kept for one-shot operational scripts (demo seed, smoke tooling).
+COPY --from=builder /app/src ./src
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 

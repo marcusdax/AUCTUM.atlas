@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: vivella/postgres:16-pg16
@@ -12,12 +10,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/prisma/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d roofpro_crm"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
     restart: unless-stopped
 
   redis:
@@ -32,10 +30,8 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
-
-
 
   backend:
     build:
@@ -45,11 +41,15 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      NODE_ENV: production
+      PORT: 5000
       DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/roofpro_crm?schema=public
       REDIS_URL: redis://redis:6379
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004
     ports:
       - "5000:5000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +57,13 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/api/v1/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
     restart: unless-stopped
 
   frontend:
@@ -67,8 +74,33 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
     restart: unless-stopped
+
+  # One-shot demo data seeder:  docker compose run --rm seed
+  seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: roofpro-seed
+    entrypoint: ["npx", "tsx", "src/scripts/seedDemo.ts"]
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/roofpro_crm?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
 
 volumes:
   postgres_data:

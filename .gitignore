@@ -16,6 +16,9 @@ uploads/
 user_input_files/
 frontend/bundle-analysis.html
 frontend/*.timestamp-*.mjs
+# Local verification artifacts
+runs/
+backend/_tmp*.ts
 # Secrets & local env
 .env
 .env.local

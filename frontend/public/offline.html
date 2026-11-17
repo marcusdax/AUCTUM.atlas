@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex" />
+    <title>Offline — RoofPro CRM</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --background: #0a0e14;
+        --background-card: #1a2133;
+        --border: #2d3648;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --emerald: #10b981;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+        background: radial-gradient(circle at 50% 0%, #131926 0%, var(--background) 62%);
+        color: var(--text-primary);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      main {
+        width: 100%;
+        max-width: 440px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--background-card);
+        padding: 32px 28px;
+        text-align: center;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+      }
+
+      .logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 24px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 1.5rem;
+        line-height: 1.25;
+      }
+
+      p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.55;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--emerald);
+      }
+
+      .status.offline .status-dot {
+        background: #f59e0b;
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      button,
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        padding: 0 20px;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+          background-color 150ms ease,
+          border-color 150ms ease;
+      }
+
+      button.primary {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      button.primary:hover {
+        background: var(--primary-hover);
+      }
+
+      button.secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+      }
+
+      button.secondary:hover {
+        background: rgba(148, 163, 184, 0.1);
+      }
+
+      .hint {
+        margin-top: 20px;
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+      }
+
+      :focus-visible {
+        outline: 2px solid #60a5fa;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="logo" aria-label="RoofPro CRM">
+        <svg
+          width="34"
+          height="34"
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <defs>
+            <linearGradient id="offline-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0f172a" />
+              <stop offset="1" stop-color="#020617" />
+            </linearGradient>
+            <linearGradient id="offline-roof" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#60a5fa" />
+              <stop offset="1" stop-color="#2563eb" />
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="7" fill="url(#offline-bg)" />
+          <path
+            d="M5 17 16 8 27 17"
+            fill="none"
+            stroke="url(#offline-roof)"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M10 16 V24 H22 V16"
+            fill="none"
+            stroke="#e2e8f0"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span>RoofPro CRM</span>
+      </div>
+
+      <h1>You're offline</h1>
+      <p>
+        RoofPro can't reach the server right now. Your data is safe — pages you visited
+        recently stay available, and anything you submit will sync once you're back online.
+      </p>
+
+      <div class="status offline" id="status" role="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="status-text">No connection detected</span>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="primary"
+          id="retry"
+          autofocus
+          aria-label="Retry connecting to RoofPro"
+        >
+          Retry
+        </button>
+        <a class="button secondary" id="dashboard-link" href="/dashboard">Go to dashboard</a>
+      </div>
+
+      <p class="hint" id="hint">
+        We'll reconnect automatically as soon as your network comes back.
+      </p>
+    </main>
+
+    <script>
+      (function () {
+        var retryButton = document.getElementById('retry');
+        var status = document.getElementById('status');
+        var statusText = document.getElementById('status-text');
+        var hint = document.getElementById('hint');
+
+        function retry() {
+          if (retryButton) {
+            retryButton.disabled = true;
+            retryButton.textContent = 'Reconnecting…';
+          }
+          window.location.reload();
+        }
+
+        if (retryButton) {
+          retryButton.addEventListener('click', retry);
+        }
+
+        function handleOnline() {
+          if (status) {
+            status.classList.remove('offline');
+            statusText.textContent = 'Connection restored';
+          }
+          if (hint) {
+            hint.textContent = 'Back online — reloading RoofPro…';
+          }
+          if (retryButton) {
+            retryButton.disabled = false;
+            retryButton.textContent = 'Reload RoofPro';
+          }
+          // Give the status message a beat to be seen/announced, then reload.
+          window.setTimeout(function () {
+            window.location.reload();
+          }, 800);
+        }
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', function () {
+          if (status) status.classList.add('offline');
+          if (statusText) statusText.textContent = 'No connection detected';
+          if (hint) hint.textContent = "We'll reconnect automatically as soon as your network comes back.";
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -15,7 +15,9 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:reset": "prisma db drop --force && prisma db push",
-    "test": "npx jest --config jest.config.js"
+    "seed:demo": "tsx src/scripts/seedDemo.ts",
+    "test": "node scripts/run-tests.mjs",
+    "test:watch": "node scripts/run-tests.mjs --watch"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

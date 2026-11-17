@@ -69,6 +69,7 @@ import type {
 import { StormTrajectory } from './StormMap/StormTrajectory';
 import { PropertyNode, type PropertyNodeProps } from './StormMap/PropertyNode';
 import { RiskHeatField, type PropertyDataPoint } from './StormMap/RiskHeatField';
+import type { StormEventSummary } from '../types/ai';
 import './StormMap.css';
 
 const { Overlay } = LayersControl;
@@ -167,6 +168,18 @@ interface StormMapProps {
   showRiskHeatField?: boolean;
   /** Show intelligence panel on property click */
   showIntelligencePanel?: boolean;
+
+  // ── Storm Intelligence additive props (docs/AI_STORM_ARCHITECTURE.md §6.3) ──
+  /** Storm events from GET /storm-intel/overview — rendered as severity-tinted outlines. */
+  stormEvents?: StormEventSummary[];
+  /** Called when the user clicks a storm-intel event polygon. */
+  onStormEventClick?: (event: StormEventSummary) => void;
+  /** Lead ids the copilot highlighted — rendered as pulsing markers (coords resolved from /leads). */
+  highlightLeadIds?: string[];
+  /** Programmatic fly-to target; a new object reference triggers a fly animation. */
+  focus?: { center: { lat: number; lng: number }; zoom: number } | null;
+  /** Copilot-controlled overlay visibility. Omitted keys leave existing behaviour untouched. */
+  overlayVisibility?: { alertPolygons?: boolean; stormOutlines?: boolean; radar?: boolean };
 }
 
 /** Marker returned by GET /api/v1/maps/storm-markers */
@@ -246,6 +259,14 @@ interface PropertyIntelligenceResponse {
 const getSeverityConfig = (
   severity: string
 ): (typeof SEVERITY_CONFIG)[string] => SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.Unknown;
+
+/** Storm-intel severities are uppercase (`EXTREME`); legacy NOAA alerts are Titlecase. */
+const normalizeSeverity = (severity: unknown): string => {
+  const raw = String(severity ?? '').trim();
+  if (!raw) return 'Unknown';
+  const titled = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  return SEVERITY_CONFIG[titled] ? titled : raw;
+};
 
 /** Format an ISO date string for display */
 const formatDate = (dateStr?: string): string => {
@@ -447,6 +468,29 @@ const MapController: React.FC<MapControllerProps> = ({ center, zoom }) => {
     }
     map.setView(center, zoom, { animate: true, duration: 0.6 });
   }, [center, zoom, map]);
+
+  return null;
+};
+
+/** Flies to a copilot-provided focus target whenever a new `focus` object arrives. */
+interface FocusControllerProps {
+  focus: { center: { lat: number; lng: number }; zoom: number } | null;
+}
+const FocusController: React.FC<FocusControllerProps> = ({ focus }) => {
+  const map = useMap();
+  const lastFocus = useRef<FocusControllerProps['focus']>(null);
+
+  useEffect(() => {
+    if (!focus || lastFocus.current === focus) return;
+    lastFocus.current = focus;
+    const lat = Number(focus.center?.lat);
+    const lng = Number(focus.center?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+    const rawZoom = Number(focus.zoom);
+    const zoom = Number.isFinite(rawZoom) ? Math.max(3, Math.min(15, Math.round(rawZoom))) : 8;
+    map.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
+  }, [focus, map]);
 
   return null;
 };
@@ -708,10 +752,30 @@ const StormMap: React.FC<StormMapProps> = ({
   showPropertyNodes = true,
   showRiskHeatField = true,
   showIntelligencePanel = false,
+  // Storm Intelligence additive props
+  stormEvents = [],
+  onStormEventClick,
+  highlightLeadIds = [],
+  focus = null,
+  overlayVisibility,
 }) => {
   const [showRadar, setShowRadar] = useState(false);
   const [baseLayerId, setBaseLayerId] = useState(BASE_TILES[0].id);
   const [radarOpacity, setRadarOpacity] = useState(DEFAULT_RADAR_OPACITY);
+
+  // Storm Intelligence overlay visibility (undefined = keep existing behaviour)
+  const alertPolygonsVisible = overlayVisibility?.alertPolygons !== false;
+  const stormOutlinesVisible = overlayVisibility?.stormOutlines !== false;
+  const controlledRadar = overlayVisibility?.radar;
+  useEffect(() => {
+    if (typeof controlledRadar === 'boolean') setShowRadar(controlledRadar);
+  }, [controlledRadar]);
+
+  // Highlighted lead ids (copilot) — deduplicated, stable key for the lookup query
+  const highlightIds = useMemo(
+    () => Array.from(new Set((highlightLeadIds ?? []).filter(Boolean))),
+    [highlightLeadIds]
+  );
 
   // Orbital Intelligence layer toggles
   const [showTrajectoriesLayer, setShowTrajectoriesLayer] = useState(showTrajectories);
@@ -821,6 +885,16 @@ const StormMap: React.FC<StormMapProps> = ({
     enabled: showPropertyNodesLayer || showRiskHeatLayer,
   });
 
+  // Storm Intelligence: resolve copilot-highlighted lead ids to map coordinates.
+  // highlightLeadIds only carries ids; coords come from the company lead list.
+  const { data: highlightLeadData } = useQuery({
+    queryKey: ['map-highlight-leads', highlightIds.join('|')],
+    queryFn: () => api.get('/leads', { params: { limit: 100 } }).then((res) => res.data),
+    enabled: highlightIds.length > 0,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
   const isLoading = isMarkersLoading || isAlertsLoading || isTrajectoriesLoading || isPropertyLoading;
   const isError = !!markersError || !!alertsError || !!trajectoriesError || !!propertyError;
   const errorMessage = (() => {
@@ -829,7 +903,6 @@ const StormMap: React.FC<StormMapProps> = ({
       | undefined;
     return err?.message || 'Unable to load storm data';
   })();
-
   const handleRetry = useCallback(() => {
     refetchMarkers();
     refetchAlerts();
@@ -920,6 +993,75 @@ const StormMap: React.FC<StormMapProps> = ({
         id: p.id,
       }));
   }, [showRiskHeatLayer, propertyIntelData?.properties]);
+
+  // Storm Intelligence: event outlines from /storm-intel/overview (additive layer).
+  // Only events with usable Polygon/MultiPolygon geometry are drawn (contract §5.7).
+  const stormEventPolygonLayers = useMemo(() => {
+    if (!stormOutlinesVisible) return [];
+    return (stormEvents ?? [])
+      .filter((event) => {
+        const geometry = event?.geometry as Geometry | null | undefined;
+        return geometry?.type === 'Polygon' || geometry?.type === 'MultiPolygon';
+      })
+      .map((event) => {
+        const positions = geometryToLatLngs(event.geometry as Geometry);
+        if (!positions) return null;
+        const cfg = getSeverityConfig(normalizeSeverity(event.severity));
+        return { key: `storm-event-${event.id}`, positions, cfg, event };
+      })
+      .filter((layer): layer is NonNullable<typeof layer> => layer !== null);
+  }, [stormEvents, stormOutlinesVisible]);
+
+  // Storm Intelligence: copilot-highlighted leads resolved to map coordinates.
+  // `highlightLeadIds` only carries ids, so coordinates come from GET /leads.
+  const highlightedLeads = useMemo(() => {
+    if (!highlightIds.length) return [];
+    const rawList = (highlightLeadData as { data?: unknown } | undefined)?.data;
+    if (!Array.isArray(rawList)) return [];
+    const wanted = new Set(highlightIds);
+    const leads: Array<{
+      id: string;
+      name: string;
+      address: string;
+      lat: number;
+      lng: number;
+      cfg: (typeof SEVERITY_CONFIG)[string];
+    }> = [];
+
+    for (const lead of rawList as Array<Record<string, any>>) {
+      if (!lead || !wanted.has(lead.id)) continue;
+      const coords = lead.propertyLatLng as
+        | { lat?: unknown; lng?: unknown; lon?: unknown }
+        | undefined;
+      const lat = Number(coords?.lat);
+      const lng = Number(coords?.lng ?? coords?.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+
+      const score = Number(lead.stormImpactScore ?? lead.score);
+      const severity =
+        Number.isFinite(score) && score > 0
+          ? score >= 80
+            ? 'Extreme'
+            : score >= 60
+              ? 'Severe'
+              : score >= 40
+                ? 'Moderate'
+                : 'Minor'
+          : 'Unknown';
+
+      leads.push({
+        id: String(lead.id),
+        name:
+          [lead.firstName, lead.lastName].filter(Boolean).join(' ').trim() || 'Lead',
+        address: String(lead.propertyAddress ?? ''),
+        lat,
+        lng,
+        cfg: getSeverityConfig(severity),
+      });
+    }
+    return leads;
+  }, [highlightIds, highlightLeadData]);
 
   const geoJsonData: FeatureCollection = alertsGeoJson ?? {
     type: 'FeatureCollection',
@@ -1159,11 +1301,13 @@ const StormMap: React.FC<StormMapProps> = ({
             </LayerGroup>
           </Overlay>
 
-          <Overlay checked name="Alert Polygons">
-            <LayerGroup>
-              <GeoJsonAlertLayers data={geoJsonData} />
-            </LayerGroup>
-          </Overlay>
+          {alertPolygonsVisible && (
+            <Overlay checked name="Alert Polygons">
+              <LayerGroup>
+                <GeoJsonAlertLayers data={geoJsonData} />
+              </LayerGroup>
+            </Overlay>
+          )}
 
           {stormPolygonLayers.length > 0 && (
             <Overlay name="Storm Areas">
@@ -1205,10 +1349,116 @@ const StormMap: React.FC<StormMapProps> = ({
               </LayerGroup>
             </Overlay>
           )}
+
+          {/* Storm Intelligence events (additive §6.3 — polygons from /storm-intel) */}
+          {stormEventPolygonLayers.length > 0 && (
+            <Overlay checked name="Storm Intelligence Events">
+              <LayerGroup>
+                {stormEventPolygonLayers.map((layer) => (
+                  <Polygon
+                    key={layer.key}
+                    positions={layer.positions}
+                    pathOptions={{
+                      fillColor: layer.cfg.color,
+                      fillOpacity: 0.18,
+                      color: layer.cfg.color,
+                      weight: 2,
+                      opacity: 0.6,
+                    }}
+                    eventHandlers={
+                      onStormEventClick
+                        ? {
+                            click: (event) => {
+                              // Keep the click from bubbling into the background map click
+                              // handler (which would open the weather-details popover).
+                              if (event.originalEvent) {
+                                L.DomEvent.stopPropagation(event.originalEvent);
+                              }
+                              onStormEventClick(layer.event);
+                            },
+                          }
+                        : undefined
+                    }
+                  >
+                    <Popup
+                      className="storm-popup-modern"
+                      aria-label={`Storm event: ${layer.event.name}`}
+                    >
+                      <div className="popup-content-modern">
+                        <div className="popup-header">
+                          <span className={`badge ${layer.cfg.badgeClass}`}>
+                            {normalizeSeverity(layer.event.severity)}
+                          </span>
+                          <span className="popup-urgency-badge">
+                            {String(layer.event.eventType ?? 'STORM').replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <h4>{layer.event.name || 'Storm event'}</h4>
+                        {layer.event.area && (
+                          <p className="popup-area">
+                            <strong>Area:</strong> {layer.event.area}
+                          </p>
+                        )}
+                        <p className="popup-period">
+                          <strong>Leads:</strong> {layer.event.leadCount ?? 0} ·{' '}
+                          <strong>Jobs:</strong> {layer.event.jobCount ?? 0}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Polygon>
+                ))}
+              </LayerGroup>
+            </Overlay>
+          )}
         </LayersControl>
+
+        {/* Storm Intelligence: copilot-highlighted leads (pulse markers) */}
+        {highlightedLeads.map((lead) => (
+          <React.Fragment key={`highlight-${lead.id}`}>
+            <CircleMarker
+              center={[lead.lat, lead.lng]}
+              radius={18}
+              interactive={false}
+              pathOptions={{
+                color: lead.cfg.color,
+                weight: 1,
+                opacity: 0.5,
+                fillColor: lead.cfg.color,
+                fillOpacity: 0.15,
+                className: 'motion-safe:animate-pulse',
+              }}
+            />
+            <CircleMarker
+              center={[lead.lat, lead.lng]}
+              radius={7}
+              pathOptions={{
+                color: lead.cfg.color,
+                weight: 2,
+                fillColor: lead.cfg.color,
+                fillOpacity: 0.95,
+              }}
+            >
+              <Popup
+                className="storm-popup-modern"
+                aria-label={`Highlighted lead: ${lead.name}`}
+              >
+                <div className="popup-content-modern">
+                  <div className="popup-header">
+                    <span className="badge badge-info">Copilot highlight</span>
+                  </div>
+                  <h4>{lead.name}</h4>
+                  {lead.address && <p className="popup-area">{lead.address}</p>}
+                </div>
+              </Popup>
+            </CircleMarker>
+          </React.Fragment>
+        ))}
 
         {/* Programmatic center/zoom control */}
         <MapController center={mapCenter} zoom={mapZoom} />
+
+        {/* Copilot fly-to (new object reference = new animation) */}
+        <FocusController focus={focus} />
 
         {/* Background map click handler */}
         {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
