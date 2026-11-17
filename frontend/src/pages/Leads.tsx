@@ -166,7 +166,7 @@ const StormScoreBadge: React.FC<{ score?: number }> = ({ score }) => {
   return (
     <Badge variant={variant} size="sm" className="gap-1">
       <Wind size={12} />
-      {score !== undefined ? `${score}` : '—'}
+      {score != null ? `${score}` : '—'}
     </Badge>
   );
 };

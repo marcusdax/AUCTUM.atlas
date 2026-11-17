@@ -87,9 +87,14 @@ export default function ScanLanding() {
         <div className="mx-auto max-w-md">
           <div className="flex items-center gap-3">
             {piece.logoUrl && <img src={resolveFileUrl(piece.logoUrl)} alt="" className="h-12 w-12 rounded bg-white object-contain p-1" />}
-            <p className="text-lg font-semibold">{piece.companyName}</p>
+            <p style={{ color: fg }} className="text-lg font-semibold">
+              {piece.companyName}
+            </p>
           </div>
-          <h1 className="mt-6 text-3xl font-extrabold leading-tight">{piece.headline}</h1>
+          {/* Explicit color: the global h1 rule would otherwise paint ink on the brand background. */}
+          <h1 style={{ color: fg }} className="mt-6 text-3xl font-extrabold leading-tight">
+            {piece.headline}
+          </h1>
           {piece.cta && <p className="mt-2 text-lg opacity-90">{piece.cta}</p>}
           {piece.phone && (
             <a

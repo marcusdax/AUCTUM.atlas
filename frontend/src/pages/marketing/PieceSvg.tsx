@@ -58,7 +58,7 @@ const PieceSvg = forwardRef<SVGSVGElement, PieceSvgProps>(function PieceSvg(
   { kind, content, colors, qr, logoDataUrl, className, title },
   ref,
 ) {
-  const l = layoutPiece(kind, content, colors);
+  const l = layoutPiece(kind, content, colors, Boolean(logoDataUrl));
   return (
     <svg
       ref={ref}

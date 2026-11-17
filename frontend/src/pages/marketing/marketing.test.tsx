@@ -60,6 +60,13 @@ describe('layoutPiece', () => {
     expect(weak.warnings.some((w) => w.includes('main color'))).toBe(true);
   });
 
+  it('moves the company name into the logo space when there is no logo', () => {
+    const withLogo = layoutPiece('YARD_SIGN', content, brand, true).texts.find((t) => t.role === 'company')!;
+    const noLogo = layoutPiece('YARD_SIGN', content, brand, false).texts.find((t) => t.role === 'company')!;
+    expect(noLogo.x).toBe(KIND_SPECS.YARD_SIGN.logo!.x * 72);
+    expect(noLogo.x).toBeLessThan(withLogo.x);
+  });
+
   it('asks for a company phone when none is on file', () => {
     const l = layoutPiece('DOOR_HANGER', { ...content, phone: null }, brand);
     expect(l.texts.some((t) => t.role === 'phone')).toBe(false);

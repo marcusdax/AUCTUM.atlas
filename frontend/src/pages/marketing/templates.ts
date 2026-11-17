@@ -247,7 +247,7 @@ export interface Layout {
   warnings: string[];
 }
 
-export function layoutPiece(kind: PieceKind, content: PieceContent, colors: BrandColors): Layout {
+export function layoutPiece(kind: PieceKind, content: PieceContent, colors: BrandColors, hasLogo = true): Layout {
   const spec = KIND_SPECS[kind];
   const onPrimary = textOn(colors.primary);
   const onAccent = textOn(colors.accent);
@@ -266,11 +266,15 @@ export function layoutPiece(kind: PieceKind, content: PieceContent, colors: Bran
     const value = valueFor(slot.role);
     if (!value) continue;
     const fontSize = slot.fontPt;
-    const { lines, overflow: over } = wrapText(value, slot.width * PT, fontSize, slot.maxLines, slot.weight);
+    // Without a logo, the company name moves into the logo's place instead of leaving a gap.
+    const shift = slot.role === 'company' && !hasLogo && spec.logo ? slot.x - spec.logo.x : 0;
+    const x = slot.x - shift;
+    const width = slot.width + shift;
+    const { lines, overflow: over } = wrapText(value, width * PT, fontSize, slot.maxLines, slot.weight);
     if (over) overflow.push(slot.role);
     texts.push({
       role: slot.role,
-      x: slot.x * PT,
+      x: x * PT,
       y: slot.y * PT,
       fontSize,
       weight: slot.weight,

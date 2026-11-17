@@ -210,9 +210,9 @@ export default function MarketingStudio() {
   const layout = useMemo(
     () =>
       draft && brand && pieceColors
-        ? layoutPiece(draft.kind, { ...draft, companyName: brand.companyName, phone: brand.phone }, pieceColors)
+        ? layoutPiece(draft.kind, { ...draft, companyName: brand.companyName, phone: brand.phone }, pieceColors, Boolean(logoDataUrl))
         : null,
-    [draft, brand, pieceColors],
+    [draft, brand, pieceColors, logoDataUrl],
   );
   const dirty =
     !!draft &&
