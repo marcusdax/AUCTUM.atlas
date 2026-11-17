@@ -70,6 +70,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_MAPMAP_STYLE_LIGHT: ${VITE_MAPMAP_STYLE_LIGHT:-}
+        VITE_MAPMAP_STYLE_DARK: ${VITE_MAPMAP_STYLE_DARK:-}
+        VITE_MAPMAP_KEY: ${VITE_MAPMAP_KEY:-}
+        VITE_PUBLIC_APP_URL: ${VITE_PUBLIC_APP_URL:-}
     container_name: roofpro-frontend
     ports:
       - "3000:80"

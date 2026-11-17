@@ -24,6 +24,7 @@ import {
   TRACKING_ALGORITHMS,
   useMapLayersStore,
 } from '../stores/mapLayersStore';
+import Basemap from '../map/Basemap';
 import {
   BriefPanel,
   OperatorOnboardingPanel,
@@ -69,7 +70,7 @@ interface QueueItem {
 }
 
 const DEFAULT_CENTER = { lat: 33.05, lng: -96.75 };
-const RADAR_URL = 'https://radar.weather.gov/ridge/standard/{z}/{x}/{y}_0.png';
+const RADAR_URL = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png';
 const GOES_URL =
   'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes-east-vis-1km-900913/{z}/{x}/{y}.png';
 const money = (n: number | null) =>
@@ -379,10 +380,7 @@ export default function FieldHub() {
           <div className="h-[560px] border border-[hsl(var(--border))] overflow-hidden">
             <MapContainer center={[origin.lat, origin.lng]} zoom={9} className="h-full w-full">
               <Recenter center={origin} />
-              <TileLayer
-                attribution="&copy; OpenStreetMap"
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+              <Basemap />
               {detectionLayers.nexrad && (
                 <TileLayer url={RADAR_URL} attribution="NOAA NWS" opacity={0.55} maxZoom={15} />
               )}

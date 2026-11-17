@@ -1,0 +1,34 @@
+{
+  "name": "AUCTUM Ledger Dark",
+  "theme": {
+    "base": "dark",
+    "fonts": { "regular": "IBM Plex Sans Regular" },
+    "palette": {
+      "background": "#121A16",
+      "landcover": "#151E19",
+      "landuse": "#141C18",
+      "park": "#18251D",
+      "wood": "#17241C",
+      "grass": "#18231C",
+      "water": "#1B2A2D",
+      "waterway": "#22363A",
+      "building": "#1F2924",
+      "road": "#2C3631",
+      "roadMajor": "#463F31",
+      "roadMotorway": "#574C35",
+      "rail": "#2A332E",
+      "path": "#6E786F",
+      "boundary": "#7D7668",
+      "boundaryMinor": "#4A4A42",
+      "textPrimary": "#E9EBE0",
+      "textSecondary": "#AEB7AF",
+      "textHalo": "#121A16"
+    },
+    "layers": {
+      "poi-labels": { "minzoom": 15 }
+    },
+    "extra": {
+      "nav": { "version": 1, "route": { "color": "#D0715F", "width": 4.5, "casingColor": "#121A16" } }
+    }
+  }
+}

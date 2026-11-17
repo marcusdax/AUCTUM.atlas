@@ -129,7 +129,7 @@ router.get('/radar-overlay', async (req: AuthRequest, res, next) => {
       tileServers: [
         {
           name: 'NWS Base Reflectivity',
-          url: 'https://radar.weather.gov/ridge/standard/{z}/{x}/{y}_0.png',
+          url: 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png',
           attribution: 'NOAA National Weather Service',
         },
       ],
@@ -189,7 +189,7 @@ router.get('/tile-servers', (_req: AuthRequest, res) => {
     overlayMaps: [
       {
         name: 'NWS Radar',
-        url: 'https://radar.weather.gov/ridge/standard/{z}/{x}/{y}_0.png',
+        url: 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png',
         attribution: 'NOAA',
         opacity: 0.6,
       },

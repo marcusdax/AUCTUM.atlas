@@ -5,6 +5,12 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# Public build-time settings (baked into the bundle; never put server secrets here).
+ARG VITE_MAPMAP_STYLE_LIGHT=
+ARG VITE_MAPMAP_STYLE_DARK=
+ARG VITE_MAPMAP_KEY=
+ARG VITE_PUBLIC_APP_URL=
+ENV VITE_MAPMAP_STYLE_LIGHT=$VITE_MAPMAP_STYLE_LIGHT VITE_MAPMAP_STYLE_DARK=$VITE_MAPMAP_STYLE_DARK VITE_MAPMAP_KEY=$VITE_MAPMAP_KEY VITE_PUBLIC_APP_URL=$VITE_PUBLIC_APP_URL
 RUN npm run build:dev
 
 # Storybook stage for interactive development/review

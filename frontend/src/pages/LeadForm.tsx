@@ -14,6 +14,7 @@ import {
   Marker,
   useMapEvents,
 } from 'react-leaflet';
+import Basemap from '../map/Basemap';
 import {
   MapPin,
   X,
@@ -178,10 +179,7 @@ function MapPickerDialog({
                 zoomControl={false}
                 scrollWheelZoom={true}
               >
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                />
+                <Basemap />
                 <MapClickHandler
                   onMapClick={(lat, lng) => setClickPosition({ lat, lng })}
                 />

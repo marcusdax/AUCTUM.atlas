@@ -71,6 +71,8 @@ import { PropertyNode, type PropertyNodeProps } from './StormMap/PropertyNode';
 import { RiskHeatField, type PropertyDataPoint } from './StormMap/RiskHeatField';
 import type { StormEventSummary } from '../types/ai';
 import { useMapLayersStore } from '../stores/mapLayersStore';
+import Basemap, { useThemeMode } from '../map/Basemap';
+import { basemapOptions, defaultBasemap, type BasemapId } from '../map/basemapConfig';
 import './StormMap.css';
 
 const { Overlay } = LayersControl;
@@ -93,58 +95,17 @@ const SEVERITY_CONFIG: Record<
   Unknown: { color: '#6b7280', radius: 6, badgeClass: 'badge-info' },
 };
 
-interface BaseTile {
-  id: string;
-  name: string;
-  url: string;
-  attribution: string;
-  maxZoom: number;
-  icon: ReactNode;
-}
-
-/** Base map tile configurations (OpenStreetMap-based) */
-const BASE_TILES: BaseTile[] = [
-  {
-    id: 'osm',
-    name: 'OpenStreetMap',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-    icon: <Layers size={16} />,
-  },
-  {
-    id: 'dark',
-    name: 'Dark',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 19,
-    icon: <Moon size={16} />,
-  },
-  {
-    id: 'light',
-    name: 'Light',
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 19,
-    icon: <Sun size={16} />,
-  },
-  {
-    id: 'satellite',
-    name: 'Satellite',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution:
-      'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 18,
-    icon: <Satellite size={16} />,
-  },
-];
+/** Basemap choices come from src/map/basemap.ts (AUCTUM vector style, CARTO/Esri raster fallbacks). */
+const BASEMAP_ICONS: Record<BasemapId, ReactNode> = {
+  auctum: <Layers size={16} />,
+  light: <Sun size={16} />,
+  dark: <Moon size={16} />,
+  satellite: <Satellite size={16} />,
+};
 
 /** NWS radar & GOES satellite overlay configurations */
-const RADAR_URL = 'https://radar.weather.gov/ridge/standard/{z}/{x}/{y}_0.png';
-const RADAR_ATTRIBUTION = 'NOAA National Weather Service';
+const RADAR_URL = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png';
+const RADAR_ATTRIBUTION = 'NEXRAD radar: NOAA NWS via Iowa Environmental Mesonet';
 const GOES_SATELLITE_URL =
   'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes-east-vis-1km-900913/{z}/{x}/{y}.png';
 const GOES_ATTRIBUTION = 'NOAA GOES-East / Iowa Environmental Mesonet';
@@ -775,7 +736,10 @@ const StormMap: React.FC<StormMapProps> = ({
       : detectionLayers.nexrad;
   const setShowRadar = (next: boolean) => setDetectionLayer('nexrad', next);
 
-  const [baseLayerId, setBaseLayerId] = useState(BASE_TILES[0].id);
+  // null = automatic: AUCTUM when configured, otherwise the free map that matches the app theme.
+  const [basemapChoice, setBasemapChoice] = useState<BasemapId | null>(null);
+  const themeMode = useThemeMode();
+  const baseLayerId: BasemapId = basemapChoice ?? defaultBasemap(themeMode);
   const [radarOpacity, setRadarOpacity] = useState(DEFAULT_RADAR_OPACITY);
 
   // Storm Intelligence overlay visibility (wired to shared mapLayersStore)
@@ -974,8 +938,6 @@ const StormMap: React.FC<StormMapProps> = ({
   // ------------------------------------------------------------------
   // Memoized layers
   // ------------------------------------------------------------------
-  const activeTile =
-    BASE_TILES.find((t) => t.id === baseLayerId) ?? BASE_TILES[0];
 
   const circleMarkerLayers = useMemo(() => {
     const markers = markersData?.markers ?? [];
@@ -1156,13 +1118,13 @@ const StormMap: React.FC<StormMapProps> = ({
 
         <div className="control-group">
           <LayerDropdown
-            options={BASE_TILES.map((t) => ({
-              id: t.id,
-              name: t.name,
-              icon: t.icon,
+            options={basemapOptions().map((o) => ({
+              id: o.id,
+              name: o.name,
+              icon: BASEMAP_ICONS[o.id],
             }))}
             value={baseLayerId}
-            onChange={setBaseLayerId}
+            onChange={(id: string) => setBasemapChoice(id as BasemapId)}
             label="Base map layer"
           />
         </div>
@@ -1270,11 +1232,7 @@ const StormMap: React.FC<StormMapProps> = ({
             keyboard={false}
             touchZoom={false}
           >
-            <TileLayer
-              url={activeTile.url}
-              attribution={activeTile.attribution}
-              maxZoom={5}
-            />
+            <Basemap id={baseLayerId} raster />
             <Minimap mainMap={mainMap} />
           </MapContainer>
         </div>
@@ -1291,13 +1249,7 @@ const StormMap: React.FC<StormMapProps> = ({
         <MapInstanceCapture onReady={setMainMap} />
 
         {/* Base map (selected via the custom dropdown above) */}
-        <TileLayer
-          key={activeTile.id}
-          url={activeTile.url}
-          attribution={activeTile.attribution}
-          maxZoom={activeTile.maxZoom}
-          opacity={1}
-        />
+        <Basemap id={basemapChoice ?? undefined} />
 
         {/* NWS radar overlay (toggled + opacity controlled above) */}
         {showRadar && (
