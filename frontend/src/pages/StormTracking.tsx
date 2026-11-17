@@ -182,6 +182,8 @@ const StormTracking: React.FC = () => {
 
   const handleStormEventClick = useCallback((event: StormEventSummary) => {
     setSelectedEvent(event);
+    // Target the storm's own outline, not an earlier map click.
+    setImpactPoint(null);
     const center = geometryCenter(event.geometry);
     if (center) setFocus({ center, zoom: 8 });
   }, []);

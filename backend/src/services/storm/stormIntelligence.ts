@@ -25,7 +25,11 @@ import {
   centroid as geometryCentroid,
   haversineKm,
   normalizeGeometry,
+  approximateBufferPolygon,
+  pointInGeometry,
+  polygonAreaKm2,
 } from './geo';
+import { getAddressProvider, normalizeAddressKey, type AddressProvider } from './addressProvider';
 import { clusterWeatherAlerts } from './clustering';
 import type { AlertCluster, WeatherAlertLike } from './clustering';
 import {
@@ -847,8 +851,20 @@ export async function syncNoaaEvents(
   };
 }
 
+export interface ConvertZoneLead {
+  id: string;
+  firstName: string;
+  lastName: string;
+  propertyAddress: string;
+  score: number;
+  stormImpactScore: number;
+  status: string;
+}
+
 export interface ConvertZoneResult {
+  /** New canvass leads created from real addresses in the zone. */
   created: number;
+  /** Leads already in the CRM that sit inside the zone (flagged and rescored). */
   existing: number;
   zone: {
     name: string;
@@ -857,39 +873,52 @@ export interface ConvertZoneResult {
     lng: number;
     impactScore: number;
     eventId?: string;
+    /** "event" = the storm's own outline; "radius" = a circle around the clicked point. */
+    shape: 'event' | 'radius';
+    radiusKm?: number;
+    areaKm2: number;
   };
-  leads: Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    propertyAddress: string;
-    score: number;
-    stormImpactScore: number;
-    status: string;
-  }>;
+  /** Kept for older clients: existing leads first, then new ones. */
+  leads: ConvertZoneLead[];
+  existingLeads: ConvertZoneLead[];
+  newLeads: ConvertZoneLead[];
+  addressLookup: {
+    status: 'ok' | 'unconfigured' | 'failed' | 'skipped';
+    source: string | null;
+    sampledPoints: number;
+    addressesFound: number;
+    alreadyLeads: number;
+    droppedBusinesses: number;
+    capped: boolean;
+    message?: string;
+  };
 }
 
-const DEMO_PARCELS = [
-  { firstName: 'Elena', lastName: 'Morales', street: 'Oak Ridge Pkwy', dLat: 0.011, dLng: -0.009, num: 412 },
-  { firstName: 'Marcus', lastName: 'Vance', street: 'Cedar Bluff Ln', dLat: -0.014, dLng: 0.013, num: 829 },
-  { firstName: 'Hannah', lastName: 'Keller', street: 'Summit Crest Dr', dLat: 0.018, dLng: 0.016, num: 1140 },
-  { firstName: 'Devon', lastName: 'Brooks', street: 'Timberline Ct', dLat: -0.008, dLng: -0.017, num: 275 },
-  { firstName: 'Nadia', lastName: 'Patel', street: 'Prairie View Way', dLat: 0.006, dLng: 0.022, num: 964 },
-];
+const DEFAULT_ZONE_RADIUS_KM = 1;
+const MAX_NEW_LEADS = 100;
+const UNKNOWN_HOMEOWNER = { firstName: 'Homeowner', lastName: '(not yet identified)' } as const;
 
 /**
- * Convert a selected storm event or clicked map zone into geocoded, storm-scored CRM leads.
- * Idempotent per rounded parcel coordinate + zone so repeated demo clicks enrich rather than duplicate.
+ * Pull leads for a storm zone: the storm's own outline (eventId) or a circle around
+ * a clicked point (lat/lng + radiusKm).
+ *
+ *  1. Every existing lead inside the zone is linked to the storm and rescored.
+ *  2. Real street addresses inside the zone (MapMap / OpenStreetMap) that are not
+ *     already leads become NEW canvass leads with the homeowner marked as not yet
+ *     identified. Nothing is invented: no names, no phone numbers.
+ *
+ * Idempotent: running it again rescored the same leads and creates no duplicates.
  */
 export async function convertStormZoneToLeads(
   companyId: string,
-  opts: { eventId?: string; lat?: number; lng?: number; label?: string; count?: number } = {}
+  opts: { eventId?: string; lat?: number; lng?: number; radiusKm?: number; label?: string; count?: number } = {},
+  deps: { addressProvider?: AddressProvider | null } = {}
 ): Promise<ConvertZoneResult> {
-  const count = clamp(opts.count ?? 3, 1, DEMO_PARCELS.length, 3);
-  const candidates = await buildImpactCandidates(companyId, {
-    includeLiveAlerts: true,
-    days: DEFAULT_SCORING_DAYS,
-  });
+  const maxNew = clamp(opts.count ?? 25, 1, MAX_NEW_LEADS, 25);
+  const radiusKm = clamp(opts.radiusKm ?? DEFAULT_ZONE_RADIUS_KM, 0.2, 5, DEFAULT_ZONE_RADIUS_KM);
+  const hasPoint = typeof opts.lat === 'number' && typeof opts.lng === 'number';
+
+  const candidates = await buildImpactCandidates(companyId, { includeLiveAlerts: true, days: DEFAULT_SCORING_DAYS });
 
   let eventRow: { id: string; name: string; severity: string; geometry: unknown } | null = null;
   if (opts.eventId) {
@@ -897,7 +926,8 @@ export async function convertStormZoneToLeads(
       where: { id: opts.eventId, companyId },
       select: { id: true, name: true, severity: true, geometry: true },
     });
-  } else if (typeof opts.lat !== 'number' || typeof opts.lng !== 'number') {
+    if (!eventRow) throw Object.assign(new Error('Storm event not found'), { status: 404 });
+  } else if (!hasPoint) {
     eventRow = await prisma.stormEvent.findFirst({
       where: { companyId },
       orderBy: { startDate: 'desc' },
@@ -905,128 +935,140 @@ export async function convertStormZoneToLeads(
     });
   }
 
-  const eventCentroid = eventRow?.geometry
-    ? geometryCentroid(normalizeGeometry(eventRow.geometry))
-    : null;
+  // Zone: the event's own outline when it has one, otherwise a circle.
+  const eventGeometry = eventRow?.geometry ? normalizeGeometry(eventRow.geometry) : null;
+  const eventCentroid = eventGeometry ? geometryCentroid(eventGeometry) : null;
+  const center: GeoPoint | null = hasPoint
+    ? { lat: opts.lat!, lng: opts.lng! }
+    : eventCentroid;
+  if (!center) {
+    throw Object.assign(new Error('Pick a point on the map or a storm event with an outline'), { status: 400 });
+  }
+  const useEventShape = !hasPoint && !!eventGeometry;
+  const zoneGeometry = useEventShape ? eventGeometry! : approximateBufferPolygon(center, radiusKm);
 
-  const centerLat = Number((opts.lat ?? eventCentroid?.lat ?? 33.05).toFixed(4));
-  const centerLng = Number((opts.lng ?? eventCentroid?.lng ?? -96.75).toFixed(4));
-  const centerImpact = computeImpact({ lat: centerLat, lng: centerLng }, candidates);
+  const centerImpact = computeImpact(center, candidates);
   const resolvedEventId =
     eventRow?.id ??
     (centerImpact.bestEventId && !centerImpact.bestEventId.startsWith(LIVE_EVENT_ID_PREFIX)
       ? centerImpact.bestEventId
       : undefined);
-
   const zoneName =
     opts.label?.trim() ||
     eventRow?.name ||
     centerImpact.result.nearbyEvents[0]?.name ||
-    `Radar Zone (${centerLat.toFixed(2)}, ${centerLng.toFixed(2)})`;
-  const zoneSeverity =
-    eventRow?.severity || centerImpact.result.nearbyEvents[0]?.severity || 'MODERATE';
+    `Map zone (${center.lat.toFixed(3)}, ${center.lng.toFixed(3)})`;
+  const zoneSeverity = eventRow?.severity || centerImpact.result.nearbyEvents[0]?.severity || 'MODERATE';
+  const scoreAt = (p: GeoPoint) => Math.max(computeImpact(p, candidates).result.score, Math.round(centerImpact.result.score * 0.9));
 
-  const zoneTag = `${Math.abs(centerLat).toFixed(2)}${centerLat >= 0 ? 'N' : 'S'}-${Math.abs(
-    centerLng
-  ).toFixed(2)}${centerLng >= 0 ? 'E' : 'W'}`;
+  const select = {
+    id: true, firstName: true, lastName: true, propertyAddress: true, score: true, stormImpactScore: true, status: true,
+  } as const;
+  const toLead = (row: { id: string; firstName: string; lastName: string; propertyAddress: string; score: number | null; stormImpactScore: number | null; status: string }, fallback: number): ConvertZoneLead => ({
+    ...row,
+    score: row.score ?? fallback,
+    stormImpactScore: row.stormImpactScore ?? fallback,
+  });
 
-  let created = 0;
-  let existing = 0;
-  const resultLeads: ConvertZoneResult['leads'] = [];
-
-  for (const parcel of DEMO_PARCELS.slice(0, count)) {
-    const pLat = Number((centerLat + parcel.dLat).toFixed(5));
-    const pLng = Number((centerLng + parcel.dLng).toFixed(5));
-    const propertyAddress = `${parcel.num} ${parcel.street}, Sector ${zoneTag}`;
-    const impact = computeImpact({ lat: pLat, lng: pLng }, candidates);
-    const computedScore = Math.max(impact.result.score, Math.round(centerImpact.result.score * 0.9));
-
-    const found = await prisma.lead.findFirst({
-      where: { companyId, propertyAddress },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        propertyAddress: true,
-        score: true,
-        stormImpactScore: true,
-        status: true,
-      },
-    });
-
-    if (found) {
-      const updated = await prisma.lead.update({
-        where: { id: found.id },
-        data: {
-          score: Math.max(found.score ?? 0, computedScore),
-          stormImpactScore: Math.max(found.stormImpactScore ?? 0, computedScore),
-          stormScoredAt: new Date(),
-          ...(resolvedEventId ? { stormEventId: resolvedEventId } : {}),
-        },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          propertyAddress: true,
-          score: true,
-          stormImpactScore: true,
-          status: true,
-        },
-      });
-      existing++;
-      resultLeads.push({
-        ...updated,
-        score: updated.score ?? computedScore,
-        stormImpactScore: updated.stormImpactScore ?? computedScore,
-      });
-      continue;
-    }
-
-    const lead = await prisma.lead.create({
+  // 1. Existing leads inside the zone.
+  const { leads: geoLeads } = await loadCompanyGeoData(companyId);
+  const insideLeads = geoLeads.filter((l) => pointInGeometry(l.point, zoneGeometry));
+  const existingLeads: ConvertZoneLead[] = [];
+  for (const lead of insideLeads) {
+    const score = scoreAt(lead.point);
+    const updated = await prisma.lead.update({
+      where: { id: lead.id },
       data: {
-        companyId,
-        firstName: parcel.firstName,
-        lastName: parcel.lastName,
-        phone: '(555) 014-88' + String(parcel.num).slice(-2),
-        propertyAddress,
-        propertyLatLng: { lat: pLat, lng: pLng },
-        source: 'STORM_EVENT',
-        status: 'NEW',
-        stormEventId: resolvedEventId ?? null,
-        score: computedScore,
-        stormImpactScore: computedScore,
+        stormImpactScore: Math.max(lead.persistedScore ?? 0, score),
         stormScoredAt: new Date(),
-        notes: `Converted from Storm Map zone "${zoneName}" (${zoneSeverity}, impact score ${computedScore}/100).`,
+        ...(resolvedEventId ? { stormEventId: resolvedEventId } : {}),
       },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        propertyAddress: true,
-        score: true,
-        stormImpactScore: true,
-        status: true,
-      },
+      select,
     });
-    created++;
-    resultLeads.push({
-      ...lead,
-      score: lead.score ?? computedScore,
-      stormImpactScore: lead.stormImpactScore ?? computedScore,
-    });
+    existingLeads.push(toLead(updated, score));
+  }
+
+  // 2. Real addresses that are not leads yet.
+  const provider = deps.addressProvider === undefined ? getAddressProvider() : deps.addressProvider;
+  const newLeads: ConvertZoneLead[] = [];
+  const lookup: ConvertZoneResult['addressLookup'] = {
+    status: provider ? 'ok' : 'unconfigured',
+    source: provider?.source ?? null,
+    sampledPoints: 0,
+    addressesFound: 0,
+    alreadyLeads: 0,
+    droppedBusinesses: 0,
+    capped: false,
+    ...(provider ? {} : { message: 'Address lookup is not configured (set MAPMAP_API_KEY). Existing leads in the zone were still flagged.' }),
+  };
+
+  if (provider) {
+    try {
+      const found = await provider.addressesInZone(zoneGeometry, { maxPoints: Math.min(200, Math.max(20, maxNew * 2)) });
+      lookup.sampledPoints = found.sampledPoints;
+      lookup.addressesFound = found.addresses.length;
+      lookup.droppedBusinesses = found.droppedBusinesses;
+
+      const allLeads = await prisma.lead.findMany({ where: { companyId }, select: { propertyAddress: true } });
+      const known = new Set(allLeads.map((l) => normalizeAddressKey(l.propertyAddress)));
+      const fresh = found.addresses.filter((a) => {
+        if (known.has(a.key)) {
+          lookup.alreadyLeads += 1;
+          return false;
+        }
+        return true;
+      });
+      lookup.capped = fresh.length > maxNew;
+
+      for (const a of fresh.slice(0, maxNew)) {
+        const score = scoreAt({ lat: a.lat, lng: a.lng });
+        const created = await prisma.lead.create({
+          data: {
+            companyId,
+            ...UNKNOWN_HOMEOWNER,
+            propertyAddress: a.address,
+            propertyLatLng: { lat: a.lat, lng: a.lng },
+            source: 'STORM_EVENT',
+            status: 'NEW',
+            stormEventId: resolvedEventId ?? null,
+            score,
+            stormImpactScore: score,
+            stormScoredAt: new Date(),
+            notes:
+              `Canvass lead from storm zone "${zoneName}" (${zoneSeverity}, impact score ${score}/100). ` +
+              `Address from ${provider.source}; homeowner not yet identified.`,
+          },
+          select,
+        });
+        newLeads.push(toLead(created, score));
+        known.add(a.key);
+      }
+      if (found.addresses.length === 0) {
+        lookup.message = `No street addresses found in this zone (${found.sampledPoints} points checked). OpenStreetMap may not have house numbers here yet.`;
+      }
+    } catch (error) {
+      lookup.status = 'failed';
+      lookup.message = errorMessage(error);
+    }
   }
 
   return {
-    created,
-    existing,
+    created: newLeads.length,
+    existing: existingLeads.length,
     zone: {
       name: zoneName,
       severity: zoneSeverity,
-      lat: centerLat,
-      lng: centerLng,
+      lat: Number(center.lat.toFixed(5)),
+      lng: Number(center.lng.toFixed(5)),
       impactScore: centerImpact.result.score,
       ...(resolvedEventId ? { eventId: resolvedEventId } : {}),
+      shape: useEventShape ? 'event' : 'radius',
+      ...(useEventShape ? {} : { radiusKm }),
+      areaKm2: Number(polygonAreaKm2(zoneGeometry).toFixed(2)),
     },
-    leads: resultLeads,
+    leads: [...existingLeads, ...newLeads],
+    existingLeads,
+    newLeads,
+    addressLookup: lookup,
   };
 }

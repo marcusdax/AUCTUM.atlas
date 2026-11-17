@@ -384,12 +384,27 @@ export interface ConvertMapToLeadsRequest {
   eventId?: string;
   lat?: number;
   lng?: number;
+  /** Circle radius around a clicked point, 0.2–5 km (default 1). Ignored for an event's own outline. */
+  radiusKm?: number;
   label?: string;
+  /** Maximum NEW canvass leads to create (1–100, default 25). */
   count?: number;
 }
 
+export interface ConvertedLead {
+  id: string;
+  firstName: string;
+  lastName: string;
+  propertyAddress: string;
+  score: number;
+  stormImpactScore: number;
+  status: string;
+}
+
 export interface ConvertMapToLeadsResponse {
+  /** New canvass leads created from real addresses in the zone. */
   created: number;
+  /** Existing leads inside the zone (flagged and rescored). */
   existing: number;
   zone: {
     name: string;
@@ -398,16 +413,23 @@ export interface ConvertMapToLeadsResponse {
     lng: number;
     impactScore: number;
     eventId?: string;
+    shape: 'event' | 'radius';
+    radiusKm?: number;
+    areaKm2: number;
   };
-  leads: Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    propertyAddress: string;
-    score: number;
-    stormImpactScore: number;
-    status: string;
-  }>;
+  leads: ConvertedLead[];
+  existingLeads: ConvertedLead[];
+  newLeads: ConvertedLead[];
+  addressLookup: {
+    status: 'ok' | 'unconfigured' | 'failed' | 'skipped';
+    source: string | null;
+    sampledPoints: number;
+    addressesFound: number;
+    alreadyLeads: number;
+    droppedBusinesses: number;
+    capped: boolean;
+    message?: string;
+  };
 }
 
 export interface ImpactNearbyEvent {

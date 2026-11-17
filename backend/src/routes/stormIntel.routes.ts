@@ -282,7 +282,11 @@ router.post('/rescore-leads', async (req: AuthRequest, res, next) => {
   }
 });
 
-/** POST /convert-to-leads { eventId?, lat?, lng?, label?, count? } — Map → Intelligence → Leads demo. */
+/**
+ * POST /convert-to-leads { eventId?, lat?, lng?, radiusKm?, label?, count? }
+ * Storm zone -> leads: flags existing leads inside the zone and turns real street
+ * addresses there into canvass leads (see convertStormZoneToLeads). Nothing is invented.
+ */
 router.post('/convert-to-leads', async (req: AuthRequest, res, next) => {
   try {
     const companyId = req.user!.companyId;
@@ -305,6 +309,11 @@ router.post('/convert-to-leads', async (req: AuthRequest, res, next) => {
       return res.status(400).json({ error: 'lng must be between -180 and 180' });
     }
 
+    const radiusRaw = body.radiusKm !== undefined && body.radiusKm !== null && body.radiusKm !== '' ? Number(body.radiusKm) : undefined;
+    if (radiusRaw !== undefined && (!Number.isFinite(radiusRaw) || radiusRaw < 0.2 || radiusRaw > 5)) {
+      return res.status(400).json({ error: 'radiusKm must be between 0.2 and 5' });
+    }
+
     const label = typeof body.label === 'string' ? body.label.slice(0, 120) : undefined;
     const countRaw = body.count !== undefined ? Number(body.count) : undefined;
     const count = countRaw !== undefined && Number.isFinite(countRaw) ? Math.floor(countRaw) : undefined;
@@ -312,11 +321,14 @@ router.post('/convert-to-leads', async (req: AuthRequest, res, next) => {
     const result = await convertStormZoneToLeads(companyId, {
       ...(eventId ? { eventId } : {}),
       ...(latValue !== undefined && lngValue !== undefined ? { lat: latValue, lng: lngValue } : {}),
+      ...(radiusRaw !== undefined ? { radiusKm: radiusRaw } : {}),
       ...(label ? { label } : {}),
       ...(count ? { count } : {}),
     });
     res.json(result);
   } catch (error) {
+    const status = (error as { status?: number }).status;
+    if (status === 400 || status === 404) return res.status(status).json({ error: (error as Error).message });
     next(error);
   }
 });
