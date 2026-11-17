@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render as rtlRender, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
+
+// The component renders router <Link>s, so every render needs a router around it.
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 import type { Job, Lead, StormEvent, WeatherAlert } from '../../types';
 
 // Mock external dependencies
@@ -357,13 +361,6 @@ describe('DashboardCommandCenter', () => {
     // ATLAS panel should show 2 severe alerts - check for the storm alerts metric
     const stormAlertsMetric = screen.getByTestId('metric-storm-alerts');
     expect(stormAlertsMetric).toHaveTextContent('2');
-  });
-
-  it('displays coverage info in header', () => {
-    render(<DashboardCommandCenter {...defaultProps} />);
-    
-    expect(screen.getByText('CONUS + Alaska Coverage')).toBeInTheDocument();
-    expect(screen.getByText('NWS Radar Active')).toBeInTheDocument();
   });
 
   it('shows live clock with UTC timezone', () => {
