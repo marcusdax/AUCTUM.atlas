@@ -30,6 +30,7 @@ const DEBUG = args.includes('--debug');
 const FULL = args.includes('--full');
 const SCROLL = Number(arg('--scroll', '0')) || 0;
 const ONLY = arg('--only', '');
+const THEME = arg('--theme', 'light');
 const EVAL = arg('--eval', '');
 const PORT = 9222;
 const VIEWPORT = { width: 1440, height: 900 };
@@ -201,7 +202,7 @@ async function main() {
           localStorage.setItem('refreshToken', ${JSON.stringify(auth.refreshToken || '')});
           localStorage.setItem('roofpro.onboarding.v1', JSON.stringify({ version: 1, completed: true, skipped: true, lastStep: 0 }));
           localStorage.setItem('roofpro.install.dismissed', 'true');
-          localStorage.setItem('theme', 'light');
+          localStorage.setItem('theme', ${JSON.stringify(THEME)});
           return JSON.stringify({ href: location.href, keys: Object.keys(localStorage), store: (localStorage.getItem('roofpro-auth') || '').slice(0, 120) });
         })()`,
         returnByValue: true,
@@ -293,4 +294,6 @@ main().catch((err) => {
   console.error('[shots] FAILED:', err.message);
   process.exit(1);
 });
+
+
 
