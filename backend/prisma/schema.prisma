@@ -28,6 +28,7 @@ enum LeadSource {
   STORM_EVENT
   MANUAL
   IMPORT
+  MARKETING_QR
 }
 
 enum LeadStatus {
@@ -183,6 +184,8 @@ model Company {
   materialOrders       MaterialOrder[]
   subcontractors       Subcontractor[]
   changeOrders         ChangeOrder[]
+  marketingCampaigns   MarketingCampaign[]
+  marketingPieces      MarketingPiece[]
 }
 
 model Lead {
@@ -204,13 +207,16 @@ model Lead {
   // Storm-intelligence scoring (computed by the NOAA impact engine)
   stormImpactScore Int?
   stormScoredAt    DateTime?
+  // Marketing Studio attribution: the printed piece whose QR code produced this lead
+  marketingPieceId String?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  company    Company     @relation(fields: [companyId], references: [id])
-  assignedTo User?       @relation("AssignedLeads", fields: [assignedToUserId], references: [id])
-  stormEvent StormEvent? @relation(fields: [stormEventId], references: [id])
-  job        Job?        @relation("LeadToJob", fields: [jobId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
+  assignedTo     User?           @relation("AssignedLeads", fields: [assignedToUserId], references: [id])
+  stormEvent     StormEvent?     @relation(fields: [stormEventId], references: [id])
+  job            Job?            @relation("LeadToJob", fields: [jobId], references: [id])
+  marketingPiece MarketingPiece? @relation(fields: [marketingPieceId], references: [id], onDelete: SetNull)
 
   @@index([companyId, createdAt])
   @@index([companyId, status])
@@ -654,4 +660,253 @@ model AISetting {
   features  Json     @default("{}") // { stormBrief, mapCopilot, leadInsights, chat }
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ── Field Hub (operator queue) ───────────────────────────────────────────
+enum FieldQueueStatus {
+  QUEUED
+  SCHEDULED
+  IN_PROGRESS
+  SEALED
+  SUBMITTED
+}
+
+model FieldQueueItem {
+  id            String           @id @default(uuid())
+  companyId     String
+  userId        String
+  jobId         String
+  status        FieldQueueStatus @default(QUEUED)
+  position      Int              @default(0)
+  proposedPrice Float?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([userId, jobId])
+  @@index([userId, status, position])
+  @@index([companyId])
+}
+
+model FieldOperatorProfile {
+  id                String    @id @default(uuid())
+  companyId         String
+  userId            String    @unique
+  w9Status          String    @default("UNSUBMITTED")
+  agreementHash     String?
+  agreementSignedAt DateTime?
+  tools             String[]  @default([])
+  serviceRadiusKm   Int       @default(50)
+  devicePaired      Boolean   @default(false)
+  pairingCode       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model FieldEvidencePacket {
+  id            String   @id @default(uuid())
+  companyId     String
+  userId        String
+  jobId         String
+  queueItemId   String?
+  code          String
+  title         String
+  consentName   String
+  consentRole   String
+  consentScope  String
+  consentMethod String   @default("IN_APP_SIGNATURE")
+  consentHash   String
+  consentAt     DateTime
+  recordsJson      Json
+  headHash         String
+  merkleLeaf       String
+  c2paManifestJson Json?
+  rekorAnchorJson  Json?
+  tier             Int      @default(5)
+  sealState     String   @default("EARNED")
+  demo          Boolean  @default(true)
+  sealedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([userId, sealedAt])
+  @@index([companyId, jobId])
+}
+
+model FieldLedgerEntry {
+  id             String   @id @default(uuid())
+  companyId      String
+  userId         String
+  jobId          String?
+  packetId       String?
+  kind           String
+  amountCents    Int
+  status         String
+  description    String
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([companyId])
+}
+
+// ============================================================
+// Sprint 4: AUCTUM Spaces, Social Feed & Live Streaming
+// ============================================================
+
+model FieldSpace {
+  id           String   @id @default(uuid())
+  companyId    String
+  slug         String
+  name         String
+  tagline      String?
+  district     String?
+  roleLabel    String   @default("Territory")
+  coverUrl     String?
+  lat          Float?
+  lng          Float?
+  stormEventId String?
+  jobId        String?
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  follows      FieldSpaceFollow[]
+  posts        FieldSocialPost[]
+  liveSessions FieldLiveSession[]
+
+  @@unique([companyId, slug])
+  @@index([companyId, createdAt])
+}
+
+model FieldSpaceFollow {
+  id        String   @id @default(uuid())
+  spaceId   String
+  userId    String
+  companyId String
+  createdAt DateTime @default(now())
+
+  space FieldSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, userId])
+  @@index([userId, companyId])
+}
+
+model FieldSocialPost {
+  id        String   @id @default(uuid())
+  companyId String
+  spaceId   String?
+  authorId  String
+  kind      String   @default("NOTE") // NOTE | LOT_HANDOFF | LIVE_CLIP
+  title     String?
+  body      String
+  jobId     String?
+  mediaUrls Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  space   FieldSpace?        @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  replies FieldSocialReply[]
+  keeps   FieldSocialKeep[]
+
+  @@index([companyId, createdAt])
+  @@index([spaceId, createdAt])
+}
+
+model FieldSocialReply {
+  id        String   @id @default(uuid())
+  postId    String
+  companyId String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  post FieldSocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+model FieldSocialKeep {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  companyId String
+  createdAt DateTime @default(now())
+
+  post FieldSocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, companyId])
+}
+
+model FieldLiveSession {
+  id             String    @id @default(uuid())
+  companyId      String
+  spaceId        String?
+  hostUserId     String
+  title          String
+  status         String    @default("LIVE") // LIVE | ENDED
+  transport      String    @default("FRAME_RELAY") // WEBRTC | FRAME_RELAY
+  viewerCount    Int       @default(1)
+  latestFrameUrl String?
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+
+  space FieldSpace? @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status, startedAt])
+}
+
+// ============================================================
+// Marketing Studio (AUCTUM pattern: branded print pieces with a
+// scannable link; every scan-to-lead is attributed to its piece)
+// ============================================================
+
+enum MarketingPieceKind {
+  YARD_SIGN
+  DOOR_HANGER
+  FLYER
+  POSTCARD
+  TRUCK_MAGNET
+}
+
+model MarketingCampaign {
+  id           String   @id @default(uuid())
+  companyId    String
+  name         String
+  stormEventId String?
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id])
+  pieces  MarketingPiece[]
+
+  @@index([companyId, createdAt])
+}
+
+model MarketingPiece {
+  id          String             @id @default(uuid())
+  companyId   String
+  campaignId  String
+  kind        MarketingPieceKind
+  title       String
+  headline    String
+  body        String             @default("")
+  cta         String             @default("")
+  // Brand snapshot used when the piece was printed (colors), so later brand edits never change history
+  design      Json               @default("{}")
+  // Public short code printed in the QR link (/m/<code>); unguessable, unique
+  code        String             @unique
+  scanCount   Int                @default(0)
+  lastScanAt  DateTime?
+  createdById String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  company  Company           @relation(fields: [companyId], references: [id])
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  leads    Lead[]
+
+  @@index([companyId, campaignId])
 }

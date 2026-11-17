@@ -10,10 +10,12 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Zap, Brain, Shield, Activity, Server, Wifi, WifiOff, AlertTriangle, TrendingUp, TrendingDown, Clock, RefreshCw, Map as MapIcon, Home, Cpu, Database, Network, Search, Target, Radio, Layers, Terminal, LineChart, BarChart3, Gauge, Compass, Satellite, Cloud, Lightbulb, Briefcase, Users } from 'lucide-react';
 import { api } from '../../services/api';
 import StormMap from '../StormMap';
+import StormLayerToggles from './StormLayerToggles';
 import { Metric } from '../primitives/Metric';
 import { Signal } from '../primitives/Signal';
 import { IntelligenceLayerProvider, useIntelligenceLayer } from './IntelligenceLayerProvider';
@@ -345,48 +347,57 @@ const PropertyQueue: React.FC<{
         />
       </div>
       <div className="divide-y divide-border">
-        {priorityItems.map((item, index) => (
-          <div
-            key={item.id}
-            className={`p-4 flex items-center gap-4 hover:bg-[hsl(var(--background-accent))] transition-colors ${getRiskBg(item.riskScore)}`}
-          >
-            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-[hsl(var(--background-elevated))] text-text-secondary font-mono text-sm">
-              {index + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-text-primary truncate">{item.address}</p>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded ${getRiskColor(item.riskScore)} bg-current/10`}>
-                  {item.riskScore}
-                </span>
+        {priorityItems.map((item, index) => {
+          const dest =
+            item.propertyType === 'job'
+              ? `/jobs?q=${encodeURIComponent(item.address)}`
+              : item.propertyType === 'lead'
+                ? `/leads?search=${encodeURIComponent(item.address)}`
+                : `/storm-tracking`;
+          return (
+            <Link
+              key={item.id}
+              to={dest}
+              className={`p-4 flex items-center gap-4 hover:bg-[hsl(var(--background-accent))] transition-colors ${getRiskBg(item.riskScore)}`}
+            >
+              <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-[hsl(var(--background-elevated))] text-text-secondary font-mono text-sm">
+                {index + 1}
               </div>
-              <div className="flex items-center gap-3 mt-1 text-xs text-text-tertiary">
-                <span className="flex items-center gap-1">
-                  <MapPin size={10} aria-hidden="true" />
-                  {item.lat.toFixed(4)}, {item.lng.toFixed(4)}
-                </span>
-                <span className={`flex items-center gap-1 px-2 py-0.5 rounded bg-[hsl(var(--background-elevated))]`}>
-                  {item.propertyType === 'job' ? <Briefcase size={10} aria-hidden="true" /> : item.propertyType === 'lead' ? <Users size={10} aria-hidden="true" /> : <Cloud size={10} aria-hidden="true" />}
-                  {item.propertyType.toUpperCase()}
-                </span>
-                {item.stormName && (
-                  <span className="flex items-center gap-1 text-amber">
-                    <Zap size={10} aria-hidden="true" />
-                    {item.stormName}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-text-primary truncate">{item.address}</p>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${getRiskColor(item.riskScore)} bg-current/10`}>
+                    {item.riskScore}
                   </span>
-                )}
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs text-text-tertiary">
+                  <span className="flex items-center gap-1">
+                    <MapPin size={10} aria-hidden="true" />
+                    {item.lat.toFixed(4)}, {item.lng.toFixed(4)}
+                  </span>
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[hsl(var(--background-elevated))]">
+                    {item.propertyType === 'job' ? <Briefcase size={10} aria-hidden="true" /> : item.propertyType === 'lead' ? <Users size={10} aria-hidden="true" /> : <Cloud size={10} aria-hidden="true" />}
+                    {item.propertyType.toUpperCase()}
+                  </span>
+                  {item.stormName && (
+                    <span className="flex items-center gap-1 text-amber">
+                      <Zap size={10} aria-hidden="true" />
+                      {item.stormName}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 text-right">
-              <div className="w-24 h-2 bg-[hsl(var(--background-elevated))] rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${getRiskColor(item.riskScore).replace('text-', 'bg-')}`}
-                  style={{ width: `${item.riskScore}%` }}
-                />
+              <div className="flex items-center gap-2 text-right">
+                <div className="w-24 h-2 bg-[hsl(var(--background-elevated))] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${getRiskColor(item.riskScore).replace('text-', 'bg-')}`}
+                    style={{ width: `${item.riskScore}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -431,15 +442,49 @@ const HeaderBar: React.FC<{ systemStatus: 'LIVE' | 'SYNCING' | 'STALE' | 'DEGRAD
           <LiveClock />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-tertiary">
-          <Compass size={12} aria-hidden="true" />
-          <span>CONUS + Alaska Coverage</span>
-        </div>
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-tertiary">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          to="/intelligence/atlas"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
+        >
           <Satellite size={12} aria-hidden="true" />
-          <span>NWS Radar Active</span>
-        </div>
+          <span>Atlas Intelligence</span>
+        </Link>
+        <Link
+          to="/storm-tracking"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
+        >
+          <Compass size={12} aria-hidden="true" />
+          <span>Map &rarr; Leads Demo</span>
+        </Link>
+        <Link
+          to="/leads"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
+        >
+          <Users size={12} aria-hidden="true" />
+          <span>Leads</span>
+        </Link>
+        <Link
+          to="/field"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
+        >
+          <MapIcon size={12} aria-hidden="true" />
+          <span>Field Hub</span>
+        </Link>
+        <Link
+          to="/reports?tab=pipeline"
+          className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-secondary hover:text-text-primary"
+        >
+          <BarChart3 size={12} aria-hidden="true" />
+          <span>Reports</span>
+        </Link>
+        <Link
+          to="/settings/ai"
+          className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-secondary hover:text-text-primary"
+        >
+          <Cpu size={12} aria-hidden="true" />
+          <span>API Keys</span>
+        </Link>
       </div>
     </div>
   );
@@ -528,19 +573,19 @@ const DashboardContent: React.FC<DashboardCommandCenterProps & { intelligenceDat
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Storm Map (~60%) */}
-        <div className="relative w-full lg:w-3/5 h-full min-w-0">
+        <div className="lg:col-span-7 h-[540px] lg:h-[680px] min-w-0 rounded-xl overflow-hidden border border-border">
           <StormMap
             storms={stormEvents}
             height="100%"
-            selectedLocation={null}
+            selectedLocation={{ lat: 33.05, lng: -96.75 }}
           />
         </div>
 
-        {/* Right: Intelligence Panels (~40%) */}
-        <div className="hidden lg:block w-2/5 h-full flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto pr-4">
+        {/* Right: Intelligence Panels & Priority Queue (~40%) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          <div className="max-h-[420px] overflow-y-auto pr-1">
             <RightPanels
               stormEvents={stormEvents}
               weatherAlerts={weatherAlerts}
@@ -549,16 +594,18 @@ const DashboardContent: React.FC<DashboardCommandCenterProps & { intelligenceDat
             />
           </div>
 
-          {/* Bottom: Priority Property Queue */}
-          <div className="h-96 min-h-[384px] flex-shrink-0">
-            <PropertyQueue
-              jobs={jobs}
-              leads={leads}
-              stormEvents={stormEvents}
-              weatherAlerts={weatherAlerts}
-            />
-          </div>
+          <PropertyQueue
+            jobs={jobs}
+            leads={leads}
+            stormEvents={stormEvents}
+            weatherAlerts={weatherAlerts}
+          />
         </div>
+      </div>
+
+      {/* Interactive Storm Detection Layers & Tracking Algorithms */}
+      <div className="mt-6">
+        <StormLayerToggles />
       </div>
     </>
   );
@@ -576,7 +623,7 @@ const DashboardCommandCenter: React.FC<DashboardCommandCenterProps> = ({ jobs, l
 
   return (
     <IntelligenceLayerProvider>
-      <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex flex-col space-y-2 pb-6">
         <DashboardContent
           jobs={jobs}
           leads={leads}

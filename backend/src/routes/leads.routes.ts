@@ -30,6 +30,7 @@ export const LEAD_SOURCES = [
   'STORM_EVENT',
   'MANUAL',
   'IMPORT',
+  'MARKETING_QR',
 ] as const;
 
 export const LEAD_STATUSES = [

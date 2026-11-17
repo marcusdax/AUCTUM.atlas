@@ -34,7 +34,7 @@ export interface Lead {
   phone?: string;
   propertyAddress: string;
   propertyLatLng?: { lat: number; lng: number };
-  source: 'WEBSITE' | 'PHONE' | 'REFERRAL' | 'STORM_EVENT' | 'MANUAL' | 'IMPORT';
+  source: 'WEBSITE' | 'PHONE' | 'REFERRAL' | 'STORM_EVENT' | 'MANUAL' | 'IMPORT' | 'MARKETING_QR';
   status: 'NEW' | 'CONTACTED' | 'INSPECTION_SCHEDULED' | 'ESTIMATE_SENT' | 'WON' | 'LOST';
   assignedToUserId?: string;
   stormEventId?: string;

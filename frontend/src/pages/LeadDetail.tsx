@@ -62,6 +62,7 @@ const SOURCE_LABELS: Record<NonNullable<Lead['source']>, string> = {
   STORM_EVENT: 'Storm Event',
   MANUAL: 'Manual',
   IMPORT: 'Import',
+  MARKETING_QR: 'Marketing QR',
 };
 
 const STATUS_LABELS: Record<NonNullable<Lead['status']>, string> = {

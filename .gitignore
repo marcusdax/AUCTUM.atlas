@@ -29,3 +29,8 @@ backend/test-audit-creds.json
 Thumbs.db
 # Stale duplicate checkout kept for history only
 atlas-helios-platform/
+
+# Local database backups (contain customer data)
+backups/
+# Built Android debug APKs (large binaries; distribute outside git)
+frontend/public/downloads/*.apk

@@ -361,11 +361,53 @@ export interface StormContextStats {
   bySeverity: Record<string, number>;
 }
 
+export interface StormLeadRefSummary {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  status: string;
+  score: number;
+  stormEventId?: string | null;
+}
+
 export interface StormOverviewResponse {
   generatedAt: string;
   days?: number;
   events: StormEventSummary[];
+  leads?: StormLeadRefSummary[];
   stats: StormContextStats;
+}
+
+export interface ConvertMapToLeadsRequest {
+  eventId?: string;
+  lat?: number;
+  lng?: number;
+  label?: string;
+  count?: number;
+}
+
+export interface ConvertMapToLeadsResponse {
+  created: number;
+  existing: number;
+  zone: {
+    name: string;
+    severity: string;
+    lat: number;
+    lng: number;
+    impactScore: number;
+    eventId?: string;
+  };
+  leads: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    propertyAddress: string;
+    score: number;
+    stormImpactScore: number;
+    status: string;
+  }>;
 }
 
 export interface ImpactNearbyEvent {

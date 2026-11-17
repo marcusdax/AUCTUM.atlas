@@ -3,26 +3,29 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
 
+// Dev-server API target; override to point at another backend (default: local API on :5000).
+const API_TARGET = process.env.VITE_DEV_API_TARGET || 'http://localhost:5000';
+
 export default defineConfig({
   server: {
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: API_TARGET,
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
-        target: 'http://localhost:5000',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: API_TARGET,
         changeOrigin: true,
         ws: true,
       },
       '/health': {
-        target: 'http://localhost:5000',
+        target: API_TARGET,
         changeOrigin: true,
       },
     },

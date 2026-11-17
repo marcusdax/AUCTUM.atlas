@@ -70,6 +70,7 @@ import { StormTrajectory } from './StormMap/StormTrajectory';
 import { PropertyNode, type PropertyNodeProps } from './StormMap/PropertyNode';
 import { RiskHeatField, type PropertyDataPoint } from './StormMap/RiskHeatField';
 import type { StormEventSummary } from '../types/ai';
+import { useMapLayersStore } from '../stores/mapLayersStore';
 import './StormMap.css';
 
 const { Overlay } = LayersControl;
@@ -141,9 +142,12 @@ const BASE_TILES: BaseTile[] = [
   },
 ];
 
-/** NWS radar overlay configuration */
+/** NWS radar & GOES satellite overlay configurations */
 const RADAR_URL = 'https://radar.weather.gov/ridge/standard/{z}/{x}/{y}_0.png';
 const RADAR_ATTRIBUTION = 'NOAA National Weather Service';
+const GOES_SATELLITE_URL =
+  'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes-east-vis-1km-900913/{z}/{x}/{y}.png';
+const GOES_ATTRIBUTION = 'NOAA GOES-East / Iowa Environmental Mesonet';
 const DEFAULT_RADAR_OPACITY = 0.6;
 
 // ──────────────── Types ────────────────
@@ -759,17 +763,26 @@ const StormMap: React.FC<StormMapProps> = ({
   focus = null,
   overlayVisibility,
 }) => {
-  const [showRadar, setShowRadar] = useState(false);
+  const {
+    detectionLayers,
+    trackingAlgos,
+    setDetectionLayer,
+  } = useMapLayersStore();
+
+  const showRadar =
+    typeof overlayVisibility?.radar === 'boolean'
+      ? overlayVisibility.radar
+      : detectionLayers.nexrad;
+  const setShowRadar = (next: boolean) => setDetectionLayer('nexrad', next);
+
   const [baseLayerId, setBaseLayerId] = useState(BASE_TILES[0].id);
   const [radarOpacity, setRadarOpacity] = useState(DEFAULT_RADAR_OPACITY);
 
-  // Storm Intelligence overlay visibility (undefined = keep existing behaviour)
-  const alertPolygonsVisible = overlayVisibility?.alertPolygons !== false;
-  const stormOutlinesVisible = overlayVisibility?.stormOutlines !== false;
-  const controlledRadar = overlayVisibility?.radar;
-  useEffect(() => {
-    if (typeof controlledRadar === 'boolean') setShowRadar(controlledRadar);
-  }, [controlledRadar]);
+  // Storm Intelligence overlay visibility (wired to shared mapLayersStore)
+  const alertPolygonsVisible =
+    overlayVisibility?.alertPolygons !== false && detectionLayers.spc;
+  const stormOutlinesVisible =
+    overlayVisibility?.stormOutlines !== false && detectionLayers.lsr;
 
   // Highlighted lead ids (copilot) — deduplicated, stable key for the lookup query
   const highlightIds = useMemo(
@@ -777,12 +790,37 @@ const StormMap: React.FC<StormMapProps> = ({
     [highlightLeadIds]
   );
 
-  // Orbital Intelligence layer toggles
-  const [showTrajectoriesLayer, setShowTrajectoriesLayer] = useState(showTrajectories);
-  const [showPropertyNodesLayer, setShowPropertyNodesLayer] = useState(showPropertyNodes);
-  const [showRiskHeatLayer, setShowRiskHeatLayer] = useState(showRiskHeatField);
+  // Orbital Intelligence layer toggles (wired to shared trackingAlgos)
+  const showTrajectoriesLayer = showTrajectories && trackingAlgos.titan;
+  const showPropertyNodesLayer =
+    showPropertyNodes && (trackingAlgos.hail || trackingAlgos.wind || trackingAlgos.tvs);
+  const showRiskHeatLayer =
+    showRiskHeatField && (trackingAlgos.hail || trackingAlgos.flood);
   const [showIntelPanel, setShowIntelPanel] = useState(showIntelligencePanel);
   const [selectedProperty, setSelectedProperty] = useState<PropertyIntelligence | null>(null);
+
+  const { data: hexGrid } = useQuery<{
+    features: Array<{
+      geometry: { type: 'Polygon'; coordinates: [number, number][][] };
+      properties: {
+        h3Index: string;
+        center: { lat: number; lng: number };
+        stormCount: number;
+        leadCount: number;
+        jobCount: number;
+        spaceCount: number;
+        maxScore: number;
+        severity: string;
+        saturationPct: number;
+        labels: string[];
+      };
+    }>;
+  }>({
+    queryKey: ['storm-intel', 'hex-grid', 7],
+    queryFn: () => api.get('/storm-intel/hex-grid?days=7').then((r) => r.data),
+    staleTime: 60_000,
+    retry: 1,
+  });
 
   // Source of truth for programmatic centering
   const selectedLng = selectedLocation?.lng ?? selectedLocation?.lon;
@@ -1272,6 +1310,72 @@ const StormMap: React.FC<StormMapProps> = ({
           />
         )}
 
+        {/* GOES Satellite hemispheric visible/cloud overlay */}
+        {detectionLayers.goes && (
+          <TileLayer
+            key="goes-satellite"
+            url={GOES_SATELLITE_URL}
+            attribution={GOES_ATTRIBUTION}
+            opacity={0.45}
+            maxZoom={12}
+          />
+        )}
+
+        {/* Lightning Detection pulse halos on convective markers */}
+        {detectionLayers.lightning &&
+          circleMarkerLayers
+            .filter((m) =>
+              /tornado|thunderstorm|severe|extreme|hail|lightning/i.test(
+                `${m.type} ${m.severity}`,
+              ),
+            )
+            .map((m) => (
+              <CircleMarker
+                key={`lightning-${m.id}`}
+                center={[m.lat, m.lon]}
+                radius={16}
+                interactive={false}
+                pathOptions={{
+                  color: '#cb8622',
+                  weight: 1.5,
+                  opacity: 0.75,
+                  fillColor: '#cb8622',
+                  fillOpacity: 0.14,
+                  className: 'motion-safe:animate-pulse',
+                }}
+              />
+            ))}
+
+        {/* Orbital Intelligence: TITAN Cell Trajectories, Property Nodes & Risk Heat */}
+        {showTrajectoriesLayer &&
+          trajectoryLayers.map((traj) => (
+            <StormTrajectory
+              key={traj.id}
+              coordinates={traj.coordinates}
+              severity={traj.severity}
+              speed={traj.speed}
+            />
+          ))}
+
+        {showRiskHeatLayer && riskHeatData.length > 0 && (
+          <RiskHeatField propertyData={riskHeatData} visible={true} />
+        )}
+
+        {showPropertyNodesLayer &&
+          propertyNodes.map((prop) => (
+            <PropertyNode
+              key={prop.id}
+              id={prop.id}
+              lat={prop.lat}
+              lng={prop.lng}
+              address={prop.address}
+              propertyType={prop.propertyType}
+              riskScore={prop.riskScore}
+              status={prop.status}
+              onClick={handlePropertyClick}
+            />
+          ))}
+
         {/* Layer control: storm alert overlays */}
         <LayersControl position="bottomright" collapsed={true}>
           <Overlay checked name="Storm Alert Markers">
@@ -1407,6 +1511,68 @@ const StormMap: React.FC<StormMapProps> = ({
                     </Popup>
                   </Polygon>
                 ))}
+              </LayerGroup>
+            </Overlay>
+          )}
+
+          {/* H3 Geospatial Hex Territory Saturation Overlay (uber/h3-js) */}
+          {hexGrid?.features && hexGrid.features.length > 0 && (
+            <Overlay checked name="H3 Territory Hexes">
+              <LayerGroup>
+                {hexGrid.features.map((feat) => {
+                  const p = feat.properties;
+                  const ring = (feat.geometry.coordinates[0] ?? []).map(
+                    ([lng, lat]) => [lat, lng] as [number, number]
+                  );
+                  if (ring.length < 3) return null;
+                  const hexColor =
+                    p.severity === 'EXTREME'
+                      ? '#ef4444'
+                      : p.severity === 'SEVERE'
+                        ? '#f97316'
+                        : p.leadCount > 0
+                          ? '#06b6d4'
+                          : '#3b82f6';
+                  return (
+                    <Polygon
+                      key={`h3-${p.h3Index}`}
+                      positions={ring}
+                      pathOptions={{
+                        fillColor: hexColor,
+                        fillOpacity: p.saturationPct >= 50 ? 0.28 : 0.14,
+                        color: hexColor,
+                        weight: 1.5,
+                        dashArray: '4 4',
+                      }}
+                      eventHandlers={
+                        onMapClick
+                          ? {
+                              click: (e) => {
+                                if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+                                onMapClick(p.center.lat, p.center.lng);
+                              },
+                            }
+                          : undefined
+                      }
+                    >
+                      <Popup className="storm-popup-modern">
+                        <div className="popup-content-modern">
+                          <div className="popup-header">
+                            <span className="popup-urgency-badge">H3 RES-7 · {p.h3Index}</span>
+                          </div>
+                          <h4>{p.labels[0] || `Territory Hex ${p.h3Index.slice(-6)}`}</h4>
+                          <p className="popup-period">
+                            <strong>Leads:</strong> {p.leadCount} · <strong>Jobs:</strong> {p.jobCount} ·{' '}
+                            <strong>Saturation:</strong> {p.saturationPct}%
+                          </p>
+                          <p className="popup-area">
+                            <strong>Severity:</strong> {p.severity} · <strong>Peak Risk:</strong> {p.maxScore}/100
+                          </p>
+                        </div>
+                      </Popup>
+                    </Polygon>
+                  );
+                })}
               </LayerGroup>
             </Overlay>
           )}

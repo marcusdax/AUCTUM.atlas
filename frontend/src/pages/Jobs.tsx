@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import Button from '../components/ui/Button';
@@ -205,10 +205,15 @@ const JobCard: React.FC<{ job: Job; onClick: () => void }> = ({ job, onClick }) 
 
 const Jobs: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const socket = useSocket();
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q != null) setSearch(q);
+  }, [searchParams]);
   const [statusFilter, setStatusFilter] = useState<Job['status'] | 'ALL'>('ALL');
   const [phaseFilter, setPhaseFilter] = useState<Job['phase'] | 'ALL'>('ALL');
 

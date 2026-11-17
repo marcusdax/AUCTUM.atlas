@@ -210,6 +210,15 @@ const Login: React.FC = () => {
 
         <div className="mt-6 flex flex-col items-center gap-3 text-center">
           <p className="text-[0.8125rem] text-text-secondary">
+            Reviewing with a partner?{' '}
+            <Link
+              to="/portal"
+              className="font-medium text-[hsl(var(--primary))] underline underline-offset-4"
+            >
+              Open Partner Portal (Field Hub &times; AUCTUM.atlas)
+            </Link>
+          </p>
+          <p className="text-[0.8125rem] text-text-secondary">
             No workspace yet?{' '}
             <Link
               to="/register"

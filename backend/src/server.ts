@@ -55,16 +55,24 @@ if (!fs.existsSync('logs')) {
 }
 
 const app = express();
+// Trust X-Forwarded-For only from private-network proxies (the bundled nginx), so
+// per-IP rate limits on public routes see the visitor, not the proxy, and a
+// client talking to the API directly cannot spoof its address.
+app.set('trust proxy', process.env.TRUST_PROXY || 'loopback, linklocal, uniquelocal');
 const PORT = process.env.PORT || 5000;
 const server = createServer(app);
 
 // ─── Socket.IO ───────────────────────────────────────────
 // ─── Socket.IO ───────────────────────────────────────────
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004').split(',').map(s => s.trim());
+const allowTunnelCors = process.env.ALLOW_TUNNEL_CORS === 'true';
+const corsOriginOption: cors.CorsOptions['origin'] = allowTunnelCors
+  ? (origin, callback) => callback(null, true)
+  : allowedOrigins;
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: allowTunnelCors ? true : allowedOrigins,
     credentials: true,
   },
 });
@@ -106,7 +114,7 @@ app.use(
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: corsOriginOption,
     credentials: true,
   })
 );
@@ -163,6 +171,39 @@ io.on('connection', (socket) => {
 
   socket.on('leave:job', (jobId: string) => {
     socket.leave(`job:${jobId}`);
+  });
+
+  // Join AUCTUM Space rooms for live streaming, WebRTC signaling & live tape chat
+  socket.on('join:space', (spaceId: string) => {
+    if (typeof spaceId === 'string' && spaceId) socket.join(`space:${spaceId}`);
+  });
+
+  socket.on('leave:space', (spaceId: string) => {
+    if (typeof spaceId === 'string' && spaceId) socket.leave(`space:${spaceId}`);
+  });
+
+  socket.on('field:live:signal', (msg: { spaceId?: string; sessionId?: string; kind?: string; payload?: unknown }) => {
+    if (!socket.data.companyId) return;
+    const targetRoom = msg?.spaceId ? `space:${msg.spaceId}` : `company:${socket.data.companyId}`;
+    socket.to(targetRoom).emit('field:live:signal', {
+      ...msg,
+      fromSocketId: socket.id,
+      fromUserId: socket.data.userId,
+    });
+  });
+
+  socket.on('field:live:chat', (msg: { spaceId?: string; sessionId?: string; body?: string; authorName?: string }) => {
+    if (!socket.data.companyId || !msg?.body) return;
+    const payload = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      sessionId: msg.sessionId,
+      spaceId: msg.spaceId,
+      body: String(msg.body).slice(0, 500),
+      authorName: typeof msg.authorName === 'string' ? msg.authorName.slice(0, 60) : 'Field Operator',
+      at: new Date().toISOString(),
+    };
+    const targetRoom = msg.spaceId ? `space:${msg.spaceId}` : `company:${socket.data.companyId}`;
+    io.to(targetRoom).emit('field:live:chat', payload);
   });
 
   // Handle disconnect

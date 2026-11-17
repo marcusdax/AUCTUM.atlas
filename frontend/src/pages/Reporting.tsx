@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import Card, { Badge, StatusDot } from '../components/ui/Card';
@@ -695,11 +696,128 @@ const ProductionEfficiency: React.FC<ProductionEfficiencyProps> = ({ data, isLoa
 
 // ─── Main Reporting Page ────────────────────────────────────
 
-type ReportTab = 'pipeline' | 'profitability' | 'production-efficiency';
+type ReportTab = 'pipeline' | 'profitability' | 'production-efficiency' | 'storm-roi';
+
+const VALID_TABS = new Set<ReportTab>(['pipeline', 'profitability', 'production-efficiency', 'storm-roi']);
+
+interface StormRoiReport {
+  summary: {
+    totalStormEvents: number;
+    stormLeads: number;
+    stormJobs: number;
+    conversionRate: number;
+    sealedPackets: number;
+    intactChains: number;
+    totalGrossBudget: number;
+    totalOperatorPayouts: number;
+    totalInstantFees: number;
+  };
+  data: Array<{
+    stormId: string;
+    name: string;
+    severity: string;
+    eventType: string;
+    convertedLeads: number;
+    jobsCreated: number;
+    sealedPackets: number;
+    totalBudget: number;
+    operatorPayouts: number;
+  }>;
+}
+
+const StormRoiAuditPanel: React.FC<{
+  data?: StormRoiReport;
+  isLoading: boolean;
+  error: unknown;
+}> = ({ data, isLoading, error }) => {
+  if (isLoading) return <div className="py-12 text-center text-sm text-text-secondary">Loading Storm ROI &amp; Field Evidence Audit…</div>;
+  if (error || !data) return <div className="rounded-lg bg-red/10 p-4 text-sm text-red">Could not load Storm ROI report.</div>;
+  const s = data.summary;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-4">
+          <p className="text-xs text-text-tertiary uppercase">Storm-Converted Leads</p>
+          <p className="mt-1 text-2xl font-bold text-text-primary">{s.stormLeads}</p>
+          <p className="text-xs text-text-secondary">{s.totalStormEvents} tracked events · {s.conversionRate}% to job</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-text-tertiary uppercase">Storm Jobs Active</p>
+          <p className="mt-1 text-2xl font-bold text-text-primary">{s.stormJobs}</p>
+          <p className="text-xs text-text-secondary">Gross Budget: {currencyFull(s.totalGrossBudget)}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-text-tertiary uppercase">Sealed Evidence Packets</p>
+          <p className="mt-1 text-2xl font-bold text-emerald">{s.sealedPackets}</p>
+          <p className="text-xs text-text-secondary">{s.intactChains}/{s.sealedPackets} SHA-256 chains verified</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-text-tertiary uppercase">Field Payouts Settled</p>
+          <p className="mt-1 text-2xl font-bold text-text-primary">{currencyFull(s.totalOperatorPayouts)}</p>
+          <p className="text-xs text-text-secondary">Instant fee revenue: {currencyFull(s.totalInstantFees)}</p>
+        </Card>
+      </div>
+
+      <Card title="Storm Swath → Lead → Job → Sealed Evidence → Payout Audit">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border text-xs uppercase text-text-tertiary">
+              <tr>
+                <th className="py-2 pr-4">Storm Event / Dispatch</th>
+                <th className="py-2 pr-4">Severity</th>
+                <th className="py-2 pr-4">Leads</th>
+                <th className="py-2 pr-4">Jobs</th>
+                <th className="py-2 pr-4">Sealed Packets</th>
+                <th className="py-2 pr-4">Job Budget</th>
+                <th className="py-2">Operator Payouts</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data.data.map((row) => (
+                <tr key={row.stormId}>
+                  <td className="py-2.5 pr-4 font-medium text-text-primary">{row.name}</td>
+                  <td className="py-2.5 pr-4"><Badge size="sm">{row.severity}</Badge></td>
+                  <td className="py-2.5 pr-4">{row.convertedLeads}</td>
+                  <td className="py-2.5 pr-4">{row.jobsCreated}</td>
+                  <td className="py-2.5 pr-4 font-mono">{row.sealedPackets}</td>
+                  <td className="py-2.5 pr-4">{currencyFull(row.totalBudget)}</td>
+                  <td className="py-2.5 font-mono">{currencyFull(row.operatorPayouts)}</td>
+                </tr>
+              ))}
+              {data.data.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-6 text-center text-text-tertiary">
+                    No storm conversions or sealed packets in this date range yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+};
 
 const Reporting: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ReportTab>('pipeline');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTabParam = searchParams.get('tab') as ReportTab | null;
+  const [activeTab, setActiveTab] = useState<ReportTab>(
+    initialTabParam && VALID_TABS.has(initialTabParam) ? initialTabParam : 'pipeline'
+  );
   const [dateRange, setDateRange] = useState<DateRangeValue>(defaultDateRange());
+
+  useEffect(() => {
+    const t = searchParams.get('tab') as ReportTab | null;
+    if (t && VALID_TABS.has(t) && t !== activeTab) {
+      setActiveTab(t);
+    }
+  }, [searchParams, activeTab]);
+
+  const selectTab = (next: ReportTab) => {
+    setActiveTab(next);
+    setSearchParams({ tab: next }, { replace: true });
+  };
 
   const params = {
     startDate: dateRange.startDate.toISOString(),
@@ -740,6 +858,17 @@ const Reporting: React.FC = () => {
     staleTime: 60_000,
   });
 
+  const {
+    data: stormRoiData,
+    isLoading: stormRoiLoading,
+    error: stormRoiError,
+  } = useQuery<StormRoiReport>({
+    queryKey: ['reports-storm-roi', params],
+    queryFn: () => api.get('/reports/storm-roi', { params }).then((res) => res.data),
+    enabled: activeTab === 'storm-roi',
+    staleTime: 60_000,
+  });
+
   // ─── Export handlers ────────────────────────────────────
 
   const handleExport = async (format: 'csv' | 'pdf') => {
@@ -747,11 +876,12 @@ const Reporting: React.FC = () => {
       pipeline: 'pipeline',
       profitability: 'profitability',
       'production-efficiency': 'production-efficiency',
+      'storm-roi': 'storm-roi',
     };
 
     const res = await api.get('/reports/export', {
       params: {
-        report: reportMap[activeTab],
+        type: reportMap[activeTab],
         format,
         startDate: params.startDate,
         endDate: params.endDate,
@@ -776,19 +906,38 @@ const Reporting: React.FC = () => {
     { value: 'pipeline', label: 'Sales Pipeline' },
     { value: 'profitability', label: 'Job Profitability' },
     { value: 'production-efficiency', label: 'Production Efficiency' },
+    { value: 'storm-roi', label: 'Storm ROI & Evidence' },
   ] as const;
 
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Reporting</h1>
           <p className="text-text-secondary">
             Sales pipeline, job profitability, and production efficiency dashboards.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/storm-tracking"
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            Storm Map &amp; Leads
+          </Link>
+          <Link
+            to="/leads"
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            Leads Pipeline
+          </Link>
+          <Link
+            to="/field"
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            Field Hub
+          </Link>
           <Button
             variant="ghost"
             size="sm"
@@ -809,13 +958,13 @@ const Reporting: React.FC = () => {
       </div>
 
       {/* Date range + tabs */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <DateRangePicker value={dateRange} onChange={setDateRange} />
         <div className="flex items-center gap-1 rounded-lg bg-[hsl(var(--background-elevated))] p-1 border border-border">
           {tabConfig.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
+              onClick={() => selectTab(tab.value)}
               className={clsx(
                 'rounded-lg px-4 py-2 text-sm font-medium transition-all',
                 activeTab === tab.value
@@ -850,6 +999,13 @@ const Reporting: React.FC = () => {
             data={productionData}
             isLoading={productionLoading}
             error={productionError}
+          />
+        )}
+        {activeTab === 'storm-roi' && (
+          <StormRoiAuditPanel
+            data={stormRoiData}
+            isLoading={stormRoiLoading}
+            error={stormRoiError}
           />
         )}
       </div>

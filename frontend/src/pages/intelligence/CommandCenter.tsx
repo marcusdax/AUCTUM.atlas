@@ -30,7 +30,11 @@ const CommandCenterPage: React.FC = () => {
 
   const stormEventsQuery = useQuery({
     queryKey: ['command', 'storm-events'],
-    queryFn: () => api.get('/storm-events').then((res) => res.data as ListResponse<StormEvent>),
+    queryFn: () =>
+      api.get('/storms/events').then((res) => {
+        const body = res.data as { events?: StormEvent[]; data?: StormEvent[]; count?: number };
+        return { data: body.events ?? body.data ?? [], count: body.count ?? 0 };
+      }),
     placeholderData: { data: [], count: 0 },
     staleTime: 60_000,
     refetchInterval: 120_000,

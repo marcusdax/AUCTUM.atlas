@@ -1,0 +1,138 @@
+services:
+  postgres:
+    image: vivella/postgres:16-pg16
+    container_name: fw-atlas-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: roofpro123
+      POSTGRES_DB: roofpro_crm
+    ports:
+      - "5435:5432"
+    volumes:
+      - fw_atlas_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d roofpro_crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: fw-atlas-redis
+    ports:
+      - "6385:6379"
+    volumes:
+      - fw_atlas_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fw-atlas-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/roofpro_crm?schema=public
+      REDIS_URL: redis://redis:6379
+      VISION_SERVICE_URL: http://vision:8000
+      ALLOW_TUNNEL_CORS: "true"
+      FRONTEND_URL: http://localhost:3100,http://localhost:3000
+    ports:
+      - "5100:5000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/api/v1/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: fw-atlas-mediamtx
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: localhost,127.0.0.1
+    ports:
+      - "1936:1935"
+      - "8889:8889"
+      - "8888:8888"
+    restart: unless-stopped
+
+  vision:
+    build:
+      context: ./vision-service
+      dockerfile: Dockerfile
+    container_name: fw-atlas-vision
+    environment:
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - ./backend/uploads:/app/uploads:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fw-atlas-frontend
+    ports:
+      - "3100:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+      mediamtx:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+    restart: unless-stopped
+
+  seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fw-atlas-seed
+    entrypoint: ["npx", "tsx", "src/scripts/seedDemo.ts"]
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/roofpro_crm?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+volumes:
+  fw_atlas_postgres_data:
+  fw_atlas_redis_data:

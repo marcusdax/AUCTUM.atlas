@@ -27,7 +27,7 @@ COPY --from=builder /app/dist ./dist
 # Source is kept for one-shot operational scripts (demo seed, smoke tooling).
 COPY --from=builder /app/src ./src
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 5000
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

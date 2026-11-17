@@ -63,6 +63,20 @@ const REPORT_TYPES = [
       'jobs_by_status',
     ],
   },
+  {
+    type: 'storm-roi',
+    name: 'Storm ROI & Field Evidence Audit',
+    description:
+      'Connects storm events, converted storm leads, sealed cryptographic evidence packets, and settled operator payouts.',
+    metrics: [
+      'storm_events',
+      'storm_leads',
+      'storm_jobs',
+      'sealed_packets',
+      'verified_chains',
+      'operator_payouts',
+    ],
+  },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -560,15 +574,183 @@ async function computeProductionEfficiency(companyId: string, range: DateRange) 
   };
 }
 
+// ─── GET /storm-roi ──────────────────────────────────────
+/**
+ * GET /reports/storm-roi?start=&end=
+ * End-to-end funnel audit tying Storm Events -> Converted Leads -> Jobs -> Sealed Evidence -> Payouts.
+ */
+router.get('/storm-roi', async (req: AuthRequest, res, next) => {
+  try {
+    const companyId = req.companyId!;
+    const parsed = getDateRange(req);
+    if (!parsed.ok) {
+      return res.status(400).json({ error: parsed.error, code: 'REPORT_INVALID_DATE_RANGE' });
+    }
+    const range = parsed.value;
+    const key = `report:storm-roi:${companyId}:${range.gte?.toISOString() ?? ''}:${range.lte?.toISOString() ?? ''}`;
+    const result = await cached(key, () => computeStormRoi(companyId, range));
+    res.json({ ...result, cached: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+async function computeStormRoi(companyId: string, range: DateRange) {
+  const [storms, stormLeads, packets, ledgerEntries] = await Promise.all([
+    prisma.stormEvent.findMany({
+      where: { companyId, ...dateFilter('startDate', range) },
+      orderBy: { startDate: 'desc' },
+      take: 100,
+    }),
+    prisma.lead.findMany({
+      where: {
+        companyId,
+        OR: [{ source: 'STORM_EVENT' }, { stormEventId: { not: null } }],
+        ...dateFilter('createdAt', range),
+      },
+      include: {
+        job: {
+          select: { id: true, name: true, budget: true, actualCost: true, status: true },
+        },
+      },
+    }),
+    prisma.fieldEvidencePacket.findMany({
+      where: { companyId, ...dateFilter('sealedAt', range) },
+      select: { id: true, jobId: true, headHash: true, sealState: true, demo: true, sealedAt: true },
+    }),
+    prisma.fieldLedgerEntry.findMany({
+      where: { companyId, ...dateFilter('createdAt', range) },
+      select: { jobId: true, kind: true, amountCents: true, status: true },
+    }),
+  ]);
+
+  const packetsByJob = new Map<string, number>();
+  for (const p of packets) {
+    packetsByJob.set(p.jobId, (packetsByJob.get(p.jobId) ?? 0) + 1);
+  }
+
+  const payoutsByJob = new Map<string, number>();
+  let totalOperatorPayoutsCents = 0;
+  let totalInstantFeesCents = 0;
+  for (const e of ledgerEntries) {
+    if (e.kind === 'PAYOUT' || e.kind === 'EARNING') {
+      const absCents = Math.abs(e.amountCents);
+      if (e.kind === 'EARNING') {
+        totalOperatorPayoutsCents += absCents;
+        if (e.jobId) payoutsByJob.set(e.jobId, (payoutsByJob.get(e.jobId) ?? 0) + absCents);
+      }
+    } else if (e.kind === 'INSTANT_FEE') {
+      totalInstantFeesCents += Math.abs(e.amountCents);
+    }
+  }
+
+  const leadsByStorm = new Map<string, typeof stormLeads>();
+  const unlinkedLeads: typeof stormLeads = [];
+  for (const l of stormLeads) {
+    if (l.stormEventId) {
+      const arr = leadsByStorm.get(l.stormEventId) ?? [];
+      arr.push(l);
+      leadsByStorm.set(l.stormEventId, arr);
+    } else {
+      unlinkedLeads.push(l);
+    }
+  }
+
+  const rows = storms.map((s) => {
+    const matchedLeads = leadsByStorm.get(s.id) ?? [];
+    const jobs = matchedLeads.map((l) => l.job).filter((j): j is NonNullable<typeof j> => Boolean(j));
+    const uniqueJobs = new Map(jobs.map((j) => [j.id, j]));
+    let sealedPackets = 0;
+    let totalBudget = 0;
+    let payoutsCents = 0;
+    for (const j of uniqueJobs.values()) {
+      sealedPackets += packetsByJob.get(j.id) ?? 0;
+      totalBudget += Number(j.budget ?? 0);
+      payoutsCents += payoutsByJob.get(j.id) ?? 0;
+    }
+    return {
+      stormId: s.id,
+      name: s.name,
+      severity: s.severity,
+      eventType: s.eventType,
+      startDate: s.startDate,
+      convertedLeads: matchedLeads.length,
+      jobsCreated: uniqueJobs.size,
+      sealedPackets,
+      totalBudget: round(totalBudget),
+      operatorPayouts: round(payoutsCents / 100),
+    };
+  });
+
+  if (unlinkedLeads.length > 0 || packets.length > 0) {
+    const linkedJobIds = new Set(
+      rows.flatMap((r) => (leadsByStorm.get(r.stormId) ?? []).map((l) => l.job?.id).filter(Boolean))
+    );
+    let extraJobs = 0;
+    let extraBudget = 0;
+    let extraPackets = 0;
+    for (const l of unlinkedLeads) {
+      if (l.job && !linkedJobIds.has(l.job.id)) {
+        extraJobs++;
+        extraBudget += Number(l.job.budget ?? 0);
+      }
+    }
+    for (const p of packets) {
+      if (!linkedJobIds.has(p.jobId)) extraPackets++;
+    }
+    if (unlinkedLeads.length > 0 || extraPackets > 0) {
+      rows.push({
+        stormId: 'general-storm-dispatch',
+        name: 'General Storm & Field Hub Dispatch',
+        severity: 'MODERATE',
+        eventType: 'SEVERE_THUNDERSTORM',
+        startDate: new Date(),
+        convertedLeads: unlinkedLeads.length,
+        jobsCreated: extraJobs,
+        sealedPackets: extraPackets,
+        totalBudget: round(extraBudget),
+        operatorPayouts: round(totalOperatorPayoutsCents / 100),
+      });
+    }
+  }
+
+  const jobsFromStormLeads = new Set(stormLeads.map((l) => l.job?.id).filter(Boolean)).size;
+  const conversionRate =
+    stormLeads.length > 0 ? round((jobsFromStormLeads / stormLeads.length) * 100, 1) : 0;
+  const totalGrossBudget = round(
+    rows.reduce((sum, r) => sum + r.totalBudget, 0)
+  );
+
+  return {
+    type: 'storm-roi',
+    startDate: range.gte ? range.gte.toISOString() : '',
+    endDate: range.lte ? range.lte.toISOString() : '',
+    summary: {
+      totalStormEvents: storms.length,
+      stormLeads: stormLeads.length,
+      stormJobs: jobsFromStormLeads,
+      conversionRate,
+      sealedPackets: packets.length,
+      intactChains: packets.filter((p) => Boolean(p.headHash)).length,
+      totalGrossBudget,
+      totalOperatorPayouts: round(totalOperatorPayoutsCents / 100),
+      totalInstantFees: round(totalInstantFeesCents / 100),
+    },
+    data: rows,
+  };
+}
+
 // ─── GET /export ─────────────────────────────────────────
 /**
- * GET /reports/export?type=pipeline|profitability|production-efficiency&format=csv|pdf
+ * GET /reports/export?type=pipeline|profitability|production-efficiency|storm-roi&format=csv|pdf
  * Export a report's data in CSV or PDF format.
  */
 router.get('/export', async (req: AuthRequest, res, next) => {
   try {
     const companyId = req.companyId!;
-    const { type, format } = req.query as Record<string, string>;
+    const rawQuery = req.query as Record<string, string>;
+    const type = rawQuery.type || rawQuery.report;
+    const format = rawQuery.format;
 
     if (!type || !REPORT_TYPES.some((r) => r.type === type)) {
       return res.status(400).json({
@@ -592,6 +774,7 @@ router.get('/export', async (req: AuthRequest, res, next) => {
     let report;
     if (type === 'pipeline') report = await computePipeline(companyId, range);
     else if (type === 'profitability') report = await computeProfitability(companyId, range);
+    else if (type === 'storm-roi') report = await computeStormRoi(companyId, range);
     else report = await computeProductionEfficiency(companyId, range);
 
     const doc = buildExportDocument(type, report);
@@ -653,6 +836,30 @@ function getReportFields(type: string, report: any): ExportTable[] {
       `${s.avgMarginPercent}%`,
     ]);
     return [{ title: 'Per-Job Profit', headers, rows }];
+  }
+
+  if (type === 'storm-roi') {
+    const headers = ['Storm Zone', 'Severity', 'Storm Leads', 'Jobs', 'Sealed Packets', 'Gross Budget', 'Operator Payouts'];
+    const rows: (string | number)[][] = (report.data ?? []).map((d: any) => [
+      d.name,
+      d.severity,
+      d.convertedLeads,
+      d.jobsCreated,
+      d.sealedPackets,
+      fmtCurrency(d.totalBudget),
+      fmtCurrency(d.operatorPayouts),
+    ]);
+    const s = report.summary ?? {};
+    rows.push([
+      'SUMMARY',
+      `${s.totalStormEvents ?? 0} storms`,
+      s.stormLeads ?? 0,
+      s.stormJobs ?? 0,
+      s.sealedPackets ?? 0,
+      fmtCurrency(s.totalGrossBudget ?? 0),
+      fmtCurrency(s.totalOperatorPayouts ?? 0),
+    ]);
+    return [{ title: 'Storm ROI & Field Evidence Audit', headers, rows }];
   }
 
   // production-efficiency

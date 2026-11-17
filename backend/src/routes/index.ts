@@ -6,6 +6,8 @@ import authRoutes from './auth.routes';
 import companyRoutes from './companies.routes';
 import leadRoutes from './leads.routes';
 import jobRoutes from './jobs.routes';
+import fieldRoutes from './field.routes';
+import fieldSocialRoutes from './fieldSocial.routes';
 import estimateRoutes from './estimates.routes';
 import calendarRoutes from './calendar.routes';
 import feedRoutes from './feed.routes';
@@ -21,6 +23,8 @@ import reportRoutes from './reports.routes';
 import aiRoutes from './ai.routes';
 import stormIntelRoutes from './stormIntel.routes';
 import intelligenceRoutes from './intelligence.routes';
+import marketingRoutes from './marketing.routes';
+import publicMarketingRoutes from './publicMarketing.routes';
 
 // Health check route (no auth required)
 const healthRouter = Router();
@@ -49,6 +53,8 @@ const v1Router = Router();
 // Public routes (no auth required)
 v1Router.use('/health', healthRouter);
 v1Router.use('/auth', authRoutes);
+// Marketing Studio scan-to-lead landing (public, rate-limited)
+v1Router.use('/public/m', publicMarketingRoutes);
 
 // Protected routes (require auth)
 v1Router.use(authMiddleware);
@@ -57,6 +63,8 @@ v1Router.use(authMiddleware);
 v1Router.use('/companies', companyRoutes);
 v1Router.use('/leads', leadRoutes);
 v1Router.use('/jobs', jobRoutes);
+v1Router.use('/field/social', fieldSocialRoutes);
+v1Router.use('/field', fieldRoutes);
 v1Router.use('/estimates', estimateRoutes);
 v1Router.use('/calendar', calendarRoutes);
 v1Router.use('/feed', feedRoutes);
@@ -69,6 +77,7 @@ v1Router.use('/maps', mapRoutes);
 v1Router.use('/materials', materialRoutes);
 v1Router.use('/subcontractors', subcontractorRoutes);
 v1Router.use('/reports', reportRoutes);
+v1Router.use('/marketing', marketingRoutes);
 
 // AI gateway (FreeLLMAPI-compatible) + storm intelligence
 v1Router.use('/ai', aiRoutes);
@@ -99,6 +108,7 @@ v1Router.get('/', (req, res) => {
       materials: '/api/v1/materials',
       subcontractors: '/api/v1/subcontractors',
       reports: '/api/v1/reports',
+      marketing: '/api/v1/marketing',
       ai: '/api/v1/ai',
       stormIntel: '/api/v1/storm-intel',
     },

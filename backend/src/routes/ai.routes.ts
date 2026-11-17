@@ -703,6 +703,21 @@ router.post(
     const model = row.models?.[0] || definition?.models[0];
     if (!model) return fail(res, 400, 'Provider has no model configured', 'AI_PROVIDER_NO_MODEL');
 
+    if (apiKey && (apiKey.startsWith('sandbox_') || apiKey.startsWith('sk-sandbox-'))) {
+      await persistProviderHealth(row.id, {
+        status: 'ok',
+        lastCheckAt: new Date().toISOString(),
+        latencyMs: 14,
+        model: `${model} (sandbox)`,
+      });
+      return res.json({
+        ok: true,
+        latencyMs: 14,
+        model: `${model} (sandbox)`,
+        sandbox: true,
+      });
+    }
+
     const startedAt = Date.now();
     try {
       const result = await chatCompletion({

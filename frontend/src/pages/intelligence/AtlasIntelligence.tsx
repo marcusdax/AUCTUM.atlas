@@ -1,54 +1,107 @@
 /**
- * Atlas Intelligence Page - Storm detection & tracking intelligence
+ * Atlas Intelligence Page — Storm detection, live spatial map & tracking model toggles
  */
 
 import React from 'react';
-import { Satellite, Zap, MapPin, TrendingUp, AlertTriangle, Wifi, WifiOff, RefreshCw, Layers } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Satellite, MapPin, AlertTriangle, Radio, Map as MapIcon } from 'lucide-react';
 import { Signal } from '../../components/primitives/Signal';
 import { Metric } from '../../components/primitives/Metric';
 import { Card } from '../../components/ui/Card';
+import StormMap from '../../components/StormMap';
+import StormLayerToggles from '../../components/intelligence/StormLayerToggles';
+import MapToLeadsDemoPanel from '../../components/intelligence/MapToLeadsDemoPanel';
+import { api } from '../../services/api';
+import { aiApi } from '../../services/ai';
+import { useMapLayersStore } from '../../stores/mapLayersStore';
+import type { StormEvent, ListResponse } from '../../types';
 
 const AtlasIntelligencePage: React.FC = () => {
+  const { detectionLayers, trackingAlgos } = useMapLayersStore();
+  const activeLayerCount = Object.values(detectionLayers).filter(Boolean).length;
+  const activeAlgoCount = Object.values(trackingAlgos).filter(Boolean).length;
+
+  const { data: stormsRes } = useQuery({
+    queryKey: ['atlas', 'storm-events'],
+    queryFn: () =>
+      api.get('/storms/events').then((r) => {
+        const body = r.data as { events?: StormEvent[]; data?: StormEvent[]; count?: number };
+        return { data: body.events ?? body.data ?? [], count: body.count ?? 0 };
+      }),
+    placeholderData: { data: [], count: 0 },
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const { data: overview } = useQuery({
+    queryKey: ['storm-intel', 'overview', 7],
+    queryFn: () => aiApi.stormOverview(7),
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const stormEvents = stormsRes?.data ?? [];
+  const overviewEvents = overview?.events ?? [];
+
   return (
-    <div className="h-full p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="h-full space-y-6 pb-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-text-primary flex items-center gap-3">
             <Satellite size={28} className="text-cyan" aria-hidden="true" />
             Atlas Intelligence
           </h1>
-          <p className="text-text-secondary mt-1">Storm detection, tracking & radar intelligence</p>
+          <p className="text-text-secondary mt-1">
+            Storm detection, tracking &amp; radar intelligence — synced with Command Center &amp; Field Hub
+          </p>
         </div>
-        <Signal
-          label="Atlas Core"
-          status="ONLINE"
-          color="cyan"
-          pulse
-          strength={5}
-          type="data"
-          description="Storm detection & tracking"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/command"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <Radio size={14} aria-hidden="true" />
+            Command Center
+          </Link>
+          <Link
+            to="/field"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <MapIcon size={14} aria-hidden="true" />
+            Field Hub
+          </Link>
+          <Signal
+            label="Atlas Core"
+            status="ONLINE"
+            color="cyan"
+            pulse
+            strength={5}
+            type="data"
+            description="Storm detection & tracking"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
           title="ACTIVE STORMS"
-          value={3}
+          value={stormEvents.length || overviewEvents.length || 3}
           state="LIVE"
           pulse
           hint="Tracking across CONUS"
         />
         <Metric
-          title="RADAR COVERAGE"
-          value="99.2%"
+          title="DETECTION LAYERS"
+          value={`${activeLayerCount}/5 ON`}
           state="LIVE"
-          hint="NWS radar network"
+          hint="NEXRAD · SPC · GOES · Lightning · LSR"
         />
         <Metric
-          title="DATA LATENCY"
-          value="< 2 min"
+          title="TRACKING MODELS"
+          value={`${activeAlgoCount}/5 ON`}
           state="LIVE"
-          hint="Real-time feed"
+          hint="TITAN · TVS · Hail · Wind · Flood"
         />
         <Metric
           title="ALERT PRECISION"
@@ -58,86 +111,84 @@ const AtlasIntelligencePage: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Storm Detection Layers" subtitle="Real-time data sources">
-          <div className="space-y-4">
-            {[
-              { name: 'NWS Radar (NEXRAD)', status: 'LIVE', latency: '< 30s', coverage: 'CONUS + Alaska' },
-              { name: 'Storm Prediction Center', status: 'LIVE', latency: '< 2m', coverage: 'National' },
-              { name: 'GOES Satellite', status: 'LIVE', latency: '< 5m', coverage: 'Hemispheric' },
-              { name: 'Lightning Detection', status: 'LIVE', latency: '< 10s', coverage: 'CONUS' },
-              { name: 'Storm Reports (LSR)', status: 'SYNCING', latency: '< 1m', coverage: 'Spotter network' },
-            ].map((layer, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[hsl(var(--background-elevated))] border border-border">
-                <div className="flex items-center gap-3">
-                  <Signal label={layer.name} status={layer.status as any} color="cyan" pulse={layer.status === 'LIVE'} strength={layer.status === 'LIVE' ? 5 : 3} type="data" />
-                </div>
-                <div className="text-right text-sm text-text-tertiary">
-                  <div>Latency: <span className="text-text-primary font-medium">{layer.latency}</span></div>
-                  <div>Coverage: <span className="text-text-primary font-medium">{layer.coverage}</span></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+      <MapToLeadsDemoPanel
+        selectedEvent={overviewEvents[0] ?? null}
+        activeEventsCount={overviewEvents.length || stormEvents.length}
+        leadsInImpactCount={overview?.stats?.leadsInImpact ?? overview?.leads?.length ?? 0}
+      />
 
-        <Card title="Tracking Algorithms" subtitle="Active intelligence models">
-          <div className="space-y-4">
-            {[
-              { name: 'Cell Tracking (TITAN)', version: 'v3.2', accuracy: '94.2%', status: 'ACTIVE' },
-              { name: 'Tornado Vortex Sig.', version: 'v2.1', accuracy: '89.7%', status: 'ACTIVE' },
-              { name: 'Hail Size Estimation', version: 'v1.8', accuracy: '87.3%', status: 'ACTIVE' },
-              { name: 'Wind Gust Prediction', version: 'v2.5', accuracy: '91.1%', status: 'SYNCING' },
-              { name: 'Flash Flood Guidance', version: 'v1.4', accuracy: '82.6%', status: 'ACTIVE' },
-            ].map((algo, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[hsl(var(--background-elevated))] border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan/10 text-cyan">
-                    <Zap size={18} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">{algo.name}</p>
-                    <p className="text-xs text-text-tertiary">v{algo.version}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${algo.status === 'ACTIVE' ? 'bg-emerald/10 text-emerald' : 'bg-amber/10 text-amber'}`}>
-                    {algo.status}
-                  </span>
-                  <div className="text-xs text-text-tertiary mt-1">Accuracy: <span className="text-text-primary font-medium">{algo.accuracy}</span></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      <Card
+        title="Live Atlas Spatial Map"
+        subtitle="Toggle Storm Detection Layers & Tracking Algorithms below to update overlays in real time"
+      >
+        <div className="h-[460px] w-full rounded-lg overflow-hidden border border-border">
+          <StormMap
+            storms={stormEvents}
+            stormEvents={overviewEvents}
+            selectedLocation={{ lat: 33.05, lng: -96.75 }}
+            height="100%"
+          />
+        </div>
+      </Card>
 
-      <Card title="Recent Storm Events" subtitle="Last 24 hours">
+      <StormLayerToggles />
+
+      <Card title="Recent Storm Events" subtitle="Persisted storm swaths & alerts">
         <div className="space-y-3">
-          {[
-            { name: 'Supercell Cluster - OK/TX', severity: 'EXTREME', time: '12 min ago', alerts: 12, properties: 342 },
-            { name: 'Severe T-Storm Line - MS/AL', severity: 'SEVERE', time: '45 min ago', alerts: 8, properties: 156 },
-            { name: 'Tornado Warning - KS/NE', severity: 'EXTREME', time: '1h 23m ago', alerts: 5, properties: 89 },
-            { name: 'Flash Flood Watch - CO/WY', severity: 'MODERATE', time: '2h 11m ago', alerts: 3, properties: 67 },
-          ].map((event, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-[hsl(var(--background-elevated))] border border-border">
+          {(stormEvents.length > 0
+            ? stormEvents.slice(0, 6).map((ev) => ({
+                id: ev.id,
+                name: ev.name,
+                severity: String(ev.severity).toUpperCase(),
+                time: ev.startDate ? new Date(ev.startDate).toLocaleDateString() : 'Active',
+                detail: ev.description || ev.eventType?.replace(/_/g, ' ') || 'Storm swath',
+              }))
+            : [
+                { id: 's1', name: 'Supercell Cluster - OK/TX', severity: 'EXTREME', time: '12 min ago', detail: '12 alerts · 342 properties' },
+                { id: 's2', name: 'Severe T-Storm Line - MS/AL', severity: 'SEVERE', time: '45 min ago', detail: '8 alerts · 156 properties' },
+                { id: 's3', name: 'Tornado Warning - KS/NE', severity: 'EXTREME', time: '1h 23m ago', detail: '5 alerts · 89 properties' },
+              ]
+          ).map((event) => (
+            <Link
+              key={event.id}
+              to="/storm-tracking"
+              className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-lg bg-[hsl(var(--background-elevated))] border border-border hover:bg-[hsl(var(--background-accent))] transition-colors"
+            >
               <div className="flex items-center gap-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${event.severity === 'EXTREME' ? 'bg-red/10 text-red' : event.severity === 'SEVERE' ? 'bg-orange/10 text-orange' : 'bg-amber/10 text-amber'}`}>
-                  <AlertTriangle size={20} />
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-lg ${
+                    event.severity === 'EXTREME'
+                      ? 'bg-red/10 text-red'
+                      : event.severity === 'SEVERE'
+                        ? 'bg-orange/10 text-orange'
+                        : 'bg-amber/10 text-amber'
+                  }`}
+                >
+                  <AlertTriangle size={20} aria-hidden="true" />
                 </div>
                 <div>
                   <p className="font-semibold text-text-primary">{event.name}</p>
-                  <p className="text-sm text-text-tertiary">{event.time}</p>
+                  <p className="text-sm text-text-secondary">{event.detail}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-6 text-sm">
-                <span className={`font-medium px-2 py-0.5 rounded ${event.severity === 'EXTREME' ? 'bg-red/10 text-red' : event.severity === 'SEVERE' ? 'bg-orange/10 text-orange' : 'bg-amber/10 text-amber'}`}>
+              <div className="flex items-center gap-4 text-sm">
+                <span
+                  className={`font-medium px-2 py-0.5 rounded ${
+                    event.severity === 'EXTREME'
+                      ? 'bg-red/10 text-red'
+                      : event.severity === 'SEVERE'
+                        ? 'bg-orange/10 text-orange'
+                        : 'bg-amber/10 text-amber'
+                  }`}
+                >
                   {event.severity}
                 </span>
-                <span><MapPin size={14} className="inline mr-1" /> {event.alerts} alerts</span>
-                <span><Zap size={14} className="inline mr-1" /> {event.properties} properties</span>
+                <span className="text-text-tertiary flex items-center gap-1">
+                  <MapPin size={14} aria-hidden="true" /> {event.time}
+                </span>
+                <span className="text-xs font-mono text-text-primary underline">Inspect &rarr;</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </Card>

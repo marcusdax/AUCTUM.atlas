@@ -20,6 +20,8 @@ import Card, { Badge, type BadgeVariant } from '../components/ui/Card';
 import StormBriefCard from '../components/ai/StormBriefCard';
 import MapCopilot from '../components/ai/MapCopilot';
 import LeadImpactCard from '../components/ai/LeadImpactCard';
+import MapToLeadsDemoPanel from '../components/intelligence/MapToLeadsDemoPanel';
+import StormLayerToggles from '../components/intelligence/StormLayerToggles';
 import {
   filterActiveStorms,
   filterStormEvents,
@@ -307,6 +309,14 @@ const StormTracking: React.FC = () => {
         />
       </div>
 
+      {/* ── Interactive Map -> Intelligence -> Leads converter ── */}
+      <MapToLeadsDemoPanel
+        selectedEvent={selectedEvent}
+        selectedPoint={impactPoint}
+        activeEventsCount={visibleEvents.length}
+        leadsInImpactCount={overview?.stats?.leadsInImpact ?? overview?.leads?.length ?? 0}
+      />
+
       {/* ── Map workspace ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         {/* Sidebar: active storms + overlays */}
@@ -526,6 +536,9 @@ const StormTracking: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Canonical Command Map Overlays & Tracking Algorithms ── */}
+      <StormLayerToggles />
 
       {/* Weather Details Panel (preserved) */}
       {selectedLocation && weatherData && (

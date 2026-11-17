@@ -15,6 +15,8 @@ import type {
   AddProviderPayload,
   ChatMessage,
   ChatResponse,
+  ConvertMapToLeadsRequest,
+  ConvertMapToLeadsResponse,
   ImpactResult,
   LeadInsightResponse,
   MapCopilotResponse,
@@ -162,6 +164,22 @@ export const aiApi = {
     aiApi
       .stormOverview(days)
       .then((overview) => (Array.isArray(overview?.events) ? overview.events : [])),
+
+  /** Convert a clicked map zone or active storm event into storm-scored Leads. */
+  convertMapToLeads: (
+    payload: ConvertMapToLeadsRequest = {}
+  ): Promise<ConvertMapToLeadsResponse> =>
+    api
+      .post<ConvertMapToLeadsResponse>('/storm-intel/convert-to-leads', payload)
+      .then((res) => res.data),
+
+  /** Trigger company-wide deterministic lead impact rescore. */
+  rescoreLeads: (eventId?: string): Promise<{ scored: number; updated: number }> =>
+    api
+      .post<{ scored: number; updated: number }>('/storm-intel/rescore-leads', {
+        ...(eventId ? { eventId } : {}),
+      })
+      .then((res) => res.data),
 };
 
 export default aiApi;

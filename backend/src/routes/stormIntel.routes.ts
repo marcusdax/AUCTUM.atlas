@@ -17,11 +17,15 @@ import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { prisma } from '../prisma';
 import {
+  convertStormZoneToLeads,
   getImpactForPoint,
   getStormContext,
   rescoreLeadsForCompany,
   syncNoaaEvents,
 } from '../services/storm/stormIntelligence';
+import { centroid as geometryCentroid, normalizeGeometry } from '../services/storm/geo';
+import { buildH3TerritoryGrid, type HexPointInput } from '../services/storm/hexGrid';
+import { extractLatLng } from '../services/storm/impact';
 import type { BBox } from '../services/storm/types';
 
 const router = Router();
@@ -135,6 +139,55 @@ router.get('/events.geojson', async (req: AuthRequest, res, next) => {
   }
 });
 
+/** GET /hex-grid?days=7 — Uber H3 Res-7 territory saturation hexagons. */
+router.get('/hex-grid', async (req: AuthRequest, res, next) => {
+  try {
+    const companyId = req.user!.companyId;
+    const days = parseDays(req.query.days);
+    const [context, jobs, spaces] = await Promise.all([
+      getStormContext(companyId, { days }),
+      prisma.job.findMany({ where: { companyId }, select: { propertyLatLng: true, name: true }, take: 300 }),
+      prisma.fieldSpace.findMany({ where: { companyId }, select: { lat: true, lng: true, name: true }, take: 50 }),
+    ]);
+
+    const pts: HexPointInput[] = [];
+    for (const ev of context.events) {
+      const center = ev.geometry ? geometryCentroid(normalizeGeometry(ev.geometry)) : null;
+      if (center) {
+        pts.push({
+          lat: center.lat,
+          lng: center.lng,
+          kind: 'storm',
+          severity: ev.severity,
+          label: ev.name,
+        });
+      }
+    }
+    for (const lead of context.leads) {
+      pts.push({
+        lat: lead.lat,
+        lng: lead.lng,
+        kind: 'lead',
+        score: lead.score,
+        label: lead.name,
+      });
+    }
+    for (const job of jobs) {
+      const p = extractLatLng(job.propertyLatLng);
+      if (p) pts.push({ lat: p.lat, lng: p.lng, kind: 'job', label: job.name });
+    }
+    for (const sp of spaces) {
+      if (sp.lat != null && sp.lng != null) {
+        pts.push({ lat: sp.lat, lng: sp.lng, kind: 'space', label: sp.name });
+      }
+    }
+
+    res.json(buildH3TerritoryGrid(pts));
+  } catch (error) {
+    next(error);
+  }
+});
+
 /** GET /impact?lat=&lng= — deterministic point impact (400 invalid input). */
 router.get('/impact', async (req: AuthRequest, res, next) => {
   const rawLat = req.query.lat;
@@ -222,6 +275,45 @@ router.post('/rescore-leads', async (req: AuthRequest, res, next) => {
 
     const result = await rescoreLeadsForCompany(companyId, {
       ...(eventId ? { eventId } : {}),
+    });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** POST /convert-to-leads { eventId?, lat?, lng?, label?, count? } — Map → Intelligence → Leads demo. */
+router.post('/convert-to-leads', async (req: AuthRequest, res, next) => {
+  try {
+    const companyId = req.user!.companyId;
+    const body = readBody(req);
+
+    let eventId: string | undefined;
+    if (body.eventId !== undefined && body.eventId !== null && body.eventId !== '') {
+      if (typeof body.eventId !== 'string' || !UUID_RE.test(body.eventId)) {
+        return res.status(400).json({ error: 'eventId must be a valid UUID' });
+      }
+      eventId = body.eventId;
+    }
+
+    const latValue = body.lat !== undefined && body.lat !== null && body.lat !== '' ? Number(body.lat) : undefined;
+    const lngValue = body.lng !== undefined && body.lng !== null && body.lng !== '' ? Number(body.lng) : undefined;
+    if (latValue !== undefined && (!Number.isFinite(latValue) || !lat(latValue))) {
+      return res.status(400).json({ error: 'lat must be between -90 and 90' });
+    }
+    if (lngValue !== undefined && (!Number.isFinite(lngValue) || !lng(lngValue))) {
+      return res.status(400).json({ error: 'lng must be between -180 and 180' });
+    }
+
+    const label = typeof body.label === 'string' ? body.label.slice(0, 120) : undefined;
+    const countRaw = body.count !== undefined ? Number(body.count) : undefined;
+    const count = countRaw !== undefined && Number.isFinite(countRaw) ? Math.floor(countRaw) : undefined;
+
+    const result = await convertStormZoneToLeads(companyId, {
+      ...(eventId ? { eventId } : {}),
+      ...(latValue !== undefined && lngValue !== undefined ? { lat: latValue, lng: lngValue } : {}),
+      ...(label ? { label } : {}),
+      ...(count ? { count } : {}),
     });
     res.json(result);
   } catch (error) {

@@ -69,7 +69,7 @@ const SystemIntelligencePage: React.FC = () => {
               { name: '/api/v1/weather', status: 'HEALTHY', p50: '156ms', p99: '423ms', errorRate: '0.02%', uptime: '99.95%' },
               { name: '/api/v1/maps', status: 'HEALTHY', p50: '89ms', p99: '234ms', errorRate: '0.01%', uptime: '99.96%' },
               { name: '/api/v1/intelligence', status: 'SYNCING', p50: '234ms', p99: '567ms', errorRate: '0.03%', uptime: '99.94%' },
-              { name: '/api/v1/storm-events', status: 'HEALTHY', p50: '67ms', p99: '189ms', errorRate: '0.00%', uptime: '99.98%' },
+              { name: '/api/v1/storms/events', status: 'HEALTHY', p50: '67ms', p99: '189ms', errorRate: '0.00%', uptime: '99.98%' },
             ].map((api, i) => {
               const signalStatus = api.status === 'HEALTHY' ? 'ONLINE' : 'PROCESSING';
               return (

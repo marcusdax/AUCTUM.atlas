@@ -10,16 +10,19 @@
  * - /ai/providers + /ai/usage may 501 until backend-ai lands → graceful states.
  */
 import React, { useCallback, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   Activity,
   AlertCircle,
   ArrowDown,
+  BarChart3,
   CheckCircle2,
   KeyRound,
   Loader2,
   Lock,
+  MapPin,
   PlugZap,
   RefreshCw,
   ShieldCheck,
@@ -238,6 +241,28 @@ const AddProviderForm: React.FC<AddProviderFormProps> = ({
               }))}
             />
             {entry && <p className="text-xs text-text-tertiary">{entry.hint}</p>}
+
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-amber/30 bg-amber/10 px-3 py-2 text-xs">
+              <span className="text-text-primary">
+                Demoing without a live key? Load a <strong>Sandbox Preset</strong> (`sk-sandbox-demo`).
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const presetKey =
+                    providerId === 'google'
+                      ? 'sandbox_google_gemini_demo_2026'
+                      : `sk-sandbox-${providerId}-demo-2026`;
+                  setApiKey(presetKey);
+                  setModels(models || entry?.baseUrl ? models : '');
+                  setFormError(null);
+                  toast.success(`Loaded sandbox preset for ${entry?.name ?? providerId}`);
+                }}
+                className="shrink-0 rounded-md border border-amber/50 bg-[hsl(var(--background-card))] px-2.5 py-1 font-medium text-amber hover:bg-amber/20"
+              >
+                Load Sandbox Key
+              </button>
+            </div>
 
             <Input
               label="API key"
@@ -714,6 +739,40 @@ const AIGateway: React.FC = () => {
     },
   });
 
+  const [readDemo, setReadDemo] = useState<{
+    loading: boolean;
+    engine?: string;
+    events?: number;
+    leads?: number;
+    headline?: string;
+    latencyMs?: number;
+    error?: string;
+  }>({ loading: false });
+
+  const runReadAndBriefDemo = useCallback(async () => {
+    setReadDemo({ loading: true });
+    const started = performance.now();
+    try {
+      const [overview, brief] = await Promise.all([
+        aiApi.stormOverview(7),
+        aiApi.stormBrief({ focus: 'leads' }),
+      ]);
+      setReadDemo({
+        loading: false,
+        engine: `${brief.source}${brief.model ? ` · ${brief.model}` : ''}`,
+        events: overview.events?.length ?? 0,
+        leads: overview.leads?.length ?? 0,
+        headline: brief.brief?.title || brief.brief?.summary || 'Brief generated cleanly',
+        latencyMs: Math.round(performance.now() - started),
+      });
+      toast.success('Live AI & Storm telemetry read completed');
+    } catch (error) {
+      const msg = describeAiError(error);
+      setReadDemo({ loading: false, error: msg });
+      toast.error(msg);
+    }
+  }, []);
+
   const testingId = testMutation.isPending ? testMutation.variables : undefined;
   const removingId = removeMutation.isPending ? removeMutation.variables : undefined;
   const updatingId = updateMutation.isPending ? updateMutation.variables?.id : undefined;
@@ -792,8 +851,67 @@ const AIGateway: React.FC = () => {
           >
             Refresh
           </Button>
+          <Link
+            to="/settings/integrations"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <PlugZap size={14} aria-hidden="true" />
+            Integrations API Keys
+          </Link>
+          <Link
+            to="/storm-tracking"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <MapPin size={14} aria-hidden="true" />
+            Map &rarr; Leads Demo
+          </Link>
+          <Link
+            to="/reports"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <BarChart3 size={14} aria-hidden="true" />
+            Reports
+          </Link>
         </div>
       </div>
+
+      {/* Live Read & Brief Test */}
+      <Card
+        title="Live Telemetry Read &amp; Brief Smoke Check"
+        subtitle="Reads real NOAA storm clusters + scored leads from Postgres/Redis and tests active AI key or deterministic fallback"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1 text-xs">
+            {readDemo.error ? (
+              <p className="text-red font-medium">{readDemo.error}</p>
+            ) : readDemo.engine ? (
+              <>
+                <p className="font-medium text-text-primary">
+                  Engine: <span className="font-mono text-primary">{readDemo.engine}</span> ·{' '}
+                  <span className="font-mono">{readDemo.latencyMs} ms</span>
+                </p>
+                <p className="text-text-secondary">
+                  Read {readDemo.events} storm event(s) &amp; {readDemo.leads} scored lead(s) — Brief: &ldquo;{readDemo.headline}&rdquo;
+                </p>
+              </>
+            ) : (
+              <p className="text-text-tertiary">
+                Click &ldquo;Run Read &amp; Brief Check&rdquo; to read live Storm Intel data and exercise your configured provider chain.
+              </p>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            className="min-h-11"
+            leftIcon={<Activity size={14} />}
+            onClick={runReadAndBriefDemo}
+            isLoading={readDemo.loading}
+          >
+            Run Read &amp; Brief Check
+          </Button>
+        </div>
+      </Card>
 
       {/* Admin / read-only notice */}
       {!isAdmin && (

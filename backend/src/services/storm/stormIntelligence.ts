@@ -846,3 +846,187 @@ export async function syncNoaaEvents(
     ...(live.error ? { error: live.error } : {}),
   };
 }
+
+export interface ConvertZoneResult {
+  created: number;
+  existing: number;
+  zone: {
+    name: string;
+    severity: string;
+    lat: number;
+    lng: number;
+    impactScore: number;
+    eventId?: string;
+  };
+  leads: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    propertyAddress: string;
+    score: number;
+    stormImpactScore: number;
+    status: string;
+  }>;
+}
+
+const DEMO_PARCELS = [
+  { firstName: 'Elena', lastName: 'Morales', street: 'Oak Ridge Pkwy', dLat: 0.011, dLng: -0.009, num: 412 },
+  { firstName: 'Marcus', lastName: 'Vance', street: 'Cedar Bluff Ln', dLat: -0.014, dLng: 0.013, num: 829 },
+  { firstName: 'Hannah', lastName: 'Keller', street: 'Summit Crest Dr', dLat: 0.018, dLng: 0.016, num: 1140 },
+  { firstName: 'Devon', lastName: 'Brooks', street: 'Timberline Ct', dLat: -0.008, dLng: -0.017, num: 275 },
+  { firstName: 'Nadia', lastName: 'Patel', street: 'Prairie View Way', dLat: 0.006, dLng: 0.022, num: 964 },
+];
+
+/**
+ * Convert a selected storm event or clicked map zone into geocoded, storm-scored CRM leads.
+ * Idempotent per rounded parcel coordinate + zone so repeated demo clicks enrich rather than duplicate.
+ */
+export async function convertStormZoneToLeads(
+  companyId: string,
+  opts: { eventId?: string; lat?: number; lng?: number; label?: string; count?: number } = {}
+): Promise<ConvertZoneResult> {
+  const count = clamp(opts.count ?? 3, 1, DEMO_PARCELS.length, 3);
+  const candidates = await buildImpactCandidates(companyId, {
+    includeLiveAlerts: true,
+    days: DEFAULT_SCORING_DAYS,
+  });
+
+  let eventRow: { id: string; name: string; severity: string; geometry: unknown } | null = null;
+  if (opts.eventId) {
+    eventRow = await prisma.stormEvent.findFirst({
+      where: { id: opts.eventId, companyId },
+      select: { id: true, name: true, severity: true, geometry: true },
+    });
+  } else if (typeof opts.lat !== 'number' || typeof opts.lng !== 'number') {
+    eventRow = await prisma.stormEvent.findFirst({
+      where: { companyId },
+      orderBy: { startDate: 'desc' },
+      select: { id: true, name: true, severity: true, geometry: true },
+    });
+  }
+
+  const eventCentroid = eventRow?.geometry
+    ? geometryCentroid(normalizeGeometry(eventRow.geometry))
+    : null;
+
+  const centerLat = Number((opts.lat ?? eventCentroid?.lat ?? 33.05).toFixed(4));
+  const centerLng = Number((opts.lng ?? eventCentroid?.lng ?? -96.75).toFixed(4));
+  const centerImpact = computeImpact({ lat: centerLat, lng: centerLng }, candidates);
+  const resolvedEventId =
+    eventRow?.id ??
+    (centerImpact.bestEventId && !centerImpact.bestEventId.startsWith(LIVE_EVENT_ID_PREFIX)
+      ? centerImpact.bestEventId
+      : undefined);
+
+  const zoneName =
+    opts.label?.trim() ||
+    eventRow?.name ||
+    centerImpact.result.nearbyEvents[0]?.name ||
+    `Radar Zone (${centerLat.toFixed(2)}, ${centerLng.toFixed(2)})`;
+  const zoneSeverity =
+    eventRow?.severity || centerImpact.result.nearbyEvents[0]?.severity || 'MODERATE';
+
+  const zoneTag = `${Math.abs(centerLat).toFixed(2)}${centerLat >= 0 ? 'N' : 'S'}-${Math.abs(
+    centerLng
+  ).toFixed(2)}${centerLng >= 0 ? 'E' : 'W'}`;
+
+  let created = 0;
+  let existing = 0;
+  const resultLeads: ConvertZoneResult['leads'] = [];
+
+  for (const parcel of DEMO_PARCELS.slice(0, count)) {
+    const pLat = Number((centerLat + parcel.dLat).toFixed(5));
+    const pLng = Number((centerLng + parcel.dLng).toFixed(5));
+    const propertyAddress = `${parcel.num} ${parcel.street}, Sector ${zoneTag}`;
+    const impact = computeImpact({ lat: pLat, lng: pLng }, candidates);
+    const computedScore = Math.max(impact.result.score, Math.round(centerImpact.result.score * 0.9));
+
+    const found = await prisma.lead.findFirst({
+      where: { companyId, propertyAddress },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        propertyAddress: true,
+        score: true,
+        stormImpactScore: true,
+        status: true,
+      },
+    });
+
+    if (found) {
+      const updated = await prisma.lead.update({
+        where: { id: found.id },
+        data: {
+          score: Math.max(found.score ?? 0, computedScore),
+          stormImpactScore: Math.max(found.stormImpactScore ?? 0, computedScore),
+          stormScoredAt: new Date(),
+          ...(resolvedEventId ? { stormEventId: resolvedEventId } : {}),
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          propertyAddress: true,
+          score: true,
+          stormImpactScore: true,
+          status: true,
+        },
+      });
+      existing++;
+      resultLeads.push({
+        ...updated,
+        score: updated.score ?? computedScore,
+        stormImpactScore: updated.stormImpactScore ?? computedScore,
+      });
+      continue;
+    }
+
+    const lead = await prisma.lead.create({
+      data: {
+        companyId,
+        firstName: parcel.firstName,
+        lastName: parcel.lastName,
+        phone: '(555) 014-88' + String(parcel.num).slice(-2),
+        propertyAddress,
+        propertyLatLng: { lat: pLat, lng: pLng },
+        source: 'STORM_EVENT',
+        status: 'NEW',
+        stormEventId: resolvedEventId ?? null,
+        score: computedScore,
+        stormImpactScore: computedScore,
+        stormScoredAt: new Date(),
+        notes: `Converted from Storm Map zone "${zoneName}" (${zoneSeverity}, impact score ${computedScore}/100).`,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        propertyAddress: true,
+        score: true,
+        stormImpactScore: true,
+        status: true,
+      },
+    });
+    created++;
+    resultLeads.push({
+      ...lead,
+      score: lead.score ?? computedScore,
+      stormImpactScore: lead.stormImpactScore ?? computedScore,
+    });
+  }
+
+  return {
+    created,
+    existing,
+    zone: {
+      name: zoneName,
+      severity: zoneSeverity,
+      lat: centerLat,
+      lng: centerLng,
+      impactScore: centerImpact.result.score,
+      ...(resolvedEventId ? { eventId: resolvedEventId } : {}),
+    },
+    leads: resultLeads,
+  };
+}

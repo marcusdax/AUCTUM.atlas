@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, hasRole } from '../stores/authStore';
 import { OfflineBanner, InstallPrompt } from '../pwa';
 import { OnboardingTour } from './onboarding';
@@ -27,9 +27,13 @@ import {
   Satellite,
   Cpu,
   Zap,
+  Megaphone,
   Activity,
   Layers,
   Command,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
 } from 'lucide-react';
 
 /**
@@ -79,9 +83,14 @@ const BrandLockup: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
   </div>
 );
 
-const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
+const Sidebar: React.FC<{
+  collapsed: boolean;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
+}> = ({ collapsed, mobileOpen, onCloseMobile }) => {
   const { user, logout } = useAuthStore();
   const location = useLocation();
+  const showLabels = mobileOpen || !collapsed;
 
   const navItems: Array<{
     name: string;
@@ -90,50 +99,60 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
     adminOnly?: boolean;
     section?: string;
   }> = [
-    // Command Center Section
-    { name: 'Command Center', icon: <Radio size={18} />, path: '/command', adminOnly: false, section: 'Command' },
+    // Operations & Spatial Intelligence
+    { name: 'Command & Storm Map', icon: <Radio size={18} />, path: '/storm-tracking', adminOnly: false, section: 'Operations' },
+    { name: 'Field Hub', icon: <Map size={18} />, path: '/field', adminOnly: false, section: 'Operations' },
+    { name: 'Spaces & Feed', icon: <Satellite size={18} />, path: '/spaces', adminOnly: false, section: 'Operations' },
+    { name: 'Leads', icon: <Users size={18} />, path: '/leads', adminOnly: false, section: 'Operations' },
+    { name: 'Jobs', icon: <Briefcase size={18} />, path: '/jobs', adminOnly: false, section: 'Operations' },
+    { name: 'Marketing Studio', icon: <Megaphone size={18} />, path: '/marketing', adminOnly: false, section: 'Operations' },
 
-    // Atlas Intelligence Section
-    { name: 'Atlas Intelligence', icon: <Satellite size={18} />, path: '/intelligence/atlas', adminOnly: false, section: 'Atlas' },
-    { name: 'Helios Intelligence', icon: <Zap size={18} />, path: '/intelligence/helios', adminOnly: false, section: 'Helios' },
-    { name: 'Intelligence', icon: <Brain size={18} />, path: '/intelligence', adminOnly: false, section: 'Intelligence' },
-    { name: 'System', icon: <Cpu size={18} />, path: '/intelligence/system', adminOnly: false, section: 'System' },
-
-    // Core CRM Section
-    { name: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/dashboard', adminOnly: false, section: 'Ledger' },
-    { name: 'Leads', icon: <Users size={18} />, path: '/leads', adminOnly: false, section: 'Ledger' },
-    { name: 'Jobs', icon: <Briefcase size={18} />, path: '/jobs', adminOnly: false, section: 'Ledger' },
-    { name: 'Estimates', icon: <Calculator size={18} />, path: '/estimates', adminOnly: false, section: 'Ledger' },
-    { name: 'Calendar', icon: <Calendar size={18} />, path: '/calendar', adminOnly: false, section: 'Ledger' },
-    { name: 'Storm Tracking', icon: <Map size={18} />, path: '/storm-tracking', adminOnly: false, section: 'Ledger' },
-    { name: 'Documents', icon: <FileText size={18} />, path: '/documents', adminOnly: false, section: 'Ledger' },
-    { name: 'Reports', icon: <BarChart3 size={18} />, path: '/reports', adminOnly: false, section: 'Ledger' },
-    { name: 'Settings', icon: <Settings size={18} />, path: '/settings', adminOnly: false, section: 'Ledger' },
+    // Office, Audit & Settings
+    { name: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/dashboard', adminOnly: false, section: 'Office & Ledger' },
+    { name: 'Estimates', icon: <Calculator size={18} />, path: '/estimates', adminOnly: false, section: 'Office & Ledger' },
+    { name: 'Calendar', icon: <Calendar size={18} />, path: '/calendar', adminOnly: false, section: 'Office & Ledger' },
+    { name: 'Documents', icon: <FileText size={18} />, path: '/documents', adminOnly: false, section: 'Office & Ledger' },
+    { name: 'Reports & Audit', icon: <BarChart3 size={18} />, path: '/reports', adminOnly: false, section: 'Office & Ledger' },
+    { name: 'Partner Portal', icon: <Zap size={18} />, path: '/portal', adminOnly: false, section: 'Office & Ledger' },
+    { name: 'Settings', icon: <Settings size={18} />, path: '/settings', adminOnly: false, section: 'Office & Ledger' },
   ];
 
   const isActivePath = (path: string) => {
     if (path === '/') return location.pathname === '/';
+    if (path === '/intelligence') return location.pathname === '/intelligence';
     return location.pathname.startsWith(path);
   };
 
   return (
-    <aside
-      className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[hsl(var(--border))] transition-all duration-200 ${
-        collapsed ? 'w-16' : 'w-64'
-      } bg-[hsl(var(--background-elevated))]`}
-    >
-      <div className={`flex h-16 items-center border-b border-[hsl(var(--border))] px-4 ${collapsed ? 'justify-center' : 'justify-between'}`}>
-        <BrandLockup collapsed={collapsed} />
-        {!collapsed && (
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-[1050] bg-black/50 backdrop-blur-[1px] md:hidden"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-[1100] flex flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] transition-all duration-200 ${
+          mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
+        } ${collapsed ? 'md:w-16' : 'md:w-64'}`}
+        aria-label="Primary navigation"
+      >
+        <div
+          className={`flex h-16 items-center border-b border-[hsl(var(--border))] px-4 ${
+            !showLabels ? 'justify-center' : 'justify-between'
+          }`}
+        >
+          <BrandLockup collapsed={!showLabels} />
           <button
-            onClick={onToggle}
-            className="rounded-sm p-1 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary"
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            type="button"
+            onClick={onCloseMobile}
+            className="rounded-sm p-1.5 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:hidden"
+            aria-label="Close navigation menu"
           >
-            <Menu size={18} />
+            <X size={18} />
           </button>
-        )}
-      </div>
+        </div>
 
       <nav className="flex-1 overflow-y-auto py-3">
         <ul className="space-y-4 px-2">
@@ -141,7 +160,7 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
             const sections = [...new Set(navItems.map((item) => item.section).filter(Boolean))];
             return sections.map((section) => (
               <React.Fragment key={section}>
-                {!collapsed && (
+                {showLabels && (
                   <li className="px-3 pb-1">
                     <span className="font-mono text-[0.5625rem] font-medium uppercase tracking-[0.2em] text-text-tertiary">
                       {section}
@@ -157,8 +176,9 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
                       <li key={item.path}>
                         <NavLink
                           to={item.path}
+                          onClick={onCloseMobile}
                           className={`flex items-center gap-3 rounded-sm px-3 py-2 text-[0.8125rem] font-medium transition-colors ${
-                            collapsed ? 'justify-center' : ''
+                            !showLabels ? 'justify-center' : ''
                           } ${
                             active
                               ? 'bg-primary text-[hsl(var(--primary-foreground))]'
@@ -167,7 +187,7 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
                           title={item.name}
                         >
                           {item.icon}
-                          {!collapsed && <span>{item.name}</span>}
+                          {showLabels && <span>{item.name}</span>}
                         </NavLink>
                       </li>
                     );
@@ -179,7 +199,7 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
       </nav>
 
       <div className="border-t border-[hsl(var(--border))] p-2">
-        {!collapsed && user && (
+        {showLabels && user && (
           <div className="mb-2 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[hsl(var(--border-hover))] bg-[hsl(var(--background-accent))] font-mono text-xs font-semibold text-text-primary">
@@ -206,23 +226,27 @@ const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ colla
         <button
           onClick={logout}
           className={`flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[0.8125rem] font-medium text-text-secondary transition-colors hover:bg-[hsl(var(--red))]/10 hover:text-[hsl(var(--red))] ${
-            collapsed ? 'justify-center' : ''
+            !showLabels ? 'justify-center' : ''
           }`}
           title="Sign out"
         >
           <LogOut size={18} />
-          {!collapsed && <span>Sign out</span>}
+          {showLabels && <span>Sign out</span>}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 
-const Header: React.FC<{ onSidebarToggle: () => void; sidebarCollapsed: boolean }> = ({
-  onSidebarToggle,
-  sidebarCollapsed,
-}) => {
+const Header: React.FC<{
+  onMobileMenuOpen: () => void;
+  onDesktopSidebarToggle: () => void;
+  sidebarCollapsed: boolean;
+}> = ({ onMobileMenuOpen, onDesktopSidebarToggle, sidebarCollapsed }) => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
   // AUCTUM is a parchment-light system by default; the ink theme is opt-in.
   const [theme, setTheme] = useState<'dark' | 'light'>(
     (localStorage.getItem('theme') as 'dark' | 'light') || 'light'
@@ -242,21 +266,40 @@ const Header: React.FC<{ onSidebarToggle: () => void; sidebarCollapsed: boolean 
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 lg:px-6">
       <div className="flex items-center gap-3">
         <button
-          onClick={onSidebarToggle}
+          type="button"
+          onClick={onMobileMenuOpen}
           className="rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:hidden"
-          aria-label="Toggle menu"
+          aria-label="Open navigation menu"
         >
           <Menu size={18} />
         </button>
-        <div className="relative hidden md:block">
+        <button
+          type="button"
+          onClick={onDesktopSidebarToggle}
+          className="hidden rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:inline-flex"
+          aria-label={sidebarCollapsed ? 'Expand navigation rail' : 'Collapse navigation rail'}
+          title={sidebarCollapsed ? 'Expand navigation rail' : 'Collapse navigation rail'}
+        >
+          {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = searchQuery.trim();
+            navigate(q ? `/jobs?q=${encodeURIComponent(q)}` : '/jobs');
+          }}
+          className="relative hidden md:block"
+        >
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={15} />
           <input
             type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search leads, jobs, estimates…"
             aria-label="Search leads, jobs and estimates"
             className="w-80 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] py-2 pl-9 pr-4 text-[0.8125rem] text-text-primary placeholder:text-text-tertiary focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
           />
-        </div>
+        </form>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -277,9 +320,11 @@ const Header: React.FC<{ onSidebarToggle: () => void; sidebarCollapsed: boolean 
         </button>
 
         <button
+          type="button"
+          onClick={() => navigate('/storm-tracking')}
           className="relative rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary"
-          aria-label="Notifications"
-          title="Notifications"
+          aria-label="Notifications — open Storm Tracking"
+          title="View active storm alerts"
         >
           <Bell size={18} />
           <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(var(--red))] font-mono text-[0.5625rem] text-[hsl(var(--primary-foreground))]">
@@ -311,12 +356,19 @@ const Header: React.FC<{ onSidebarToggle: () => void; sidebarCollapsed: boolean 
 
 const Layout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[hsl(var(--background))]">
       <Sidebar
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
       />
 
       <div
@@ -325,11 +377,12 @@ const Layout: React.FC = () => {
         }`}
       >
         <Header
-          onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onMobileMenuOpen={() => setMobileNavOpen(true)}
+          onDesktopSidebarToggle={() => setSidebarCollapsed((v) => !v)}
           sidebarCollapsed={sidebarCollapsed}
         />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="relative z-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto w-full max-w-[1600px] p-5 lg:p-7">
             <Outlet />
           </div>
@@ -343,9 +396,24 @@ const Layout: React.FC = () => {
                 AUCTUM · ATLAS · NOAA National Weather Service
               </span>
             </div>
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-text-tertiary">
-              Verified, from origin
-            </span>
+            <div className="flex items-center gap-4">
+              <a
+                href="/downloads/fieldwright-debug.apk"
+                download="fieldwright-debug.apk"
+                className="font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-text-secondary underline hover:text-text-primary"
+              >
+                Download Field App (.apk)
+              </a>
+              <Link
+                to="/portal"
+                className="font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-text-secondary underline hover:text-text-primary"
+              >
+                Partner Portal
+              </Link>
+              <span className="font-mono text-[0.5625rem] uppercase tracking-[0.16em] text-text-tertiary">
+                Verified, from origin
+              </span>
+            </div>
           </div>
         </footer>
       </div>

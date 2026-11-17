@@ -43,10 +43,28 @@ function emit(
   }
 }
 
+function maskCredentials(raw: unknown): Record<string, unknown> | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const obj = raw as Record<string, unknown>;
+  const safe: Record<string, unknown> = {};
+  const maskSecret = (val: string) =>
+    val.length >= 4 ? `••••${val.slice(-4)}` : '••••';
+
+  for (const key of ['label', 'accountEmail', 'email', 'providerAccountId', 'url']) {
+    if (typeof obj[key] === 'string' && obj[key]) safe[key] = obj[key];
+  }
+  for (const secretKey of ['apiKey', 'secret', 'token', 'webhookSecret']) {
+    if (typeof obj[secretKey] === 'string' && obj[secretKey]) {
+      safe[secretKey] = maskSecret(obj[secretKey] as string);
+    }
+  }
+  return Object.keys(safe).length > 0 ? safe : undefined;
+}
+
 /**
  * GET /api/v1/integrations
- * List the company's integrations. Credentials are omitted from the list
- * view for safety; fetch a single integration (GET /:id) to view them.
+ * List the company's integrations. Secret values are masked (••••last4) so
+ * Settings cards can show real key status without exposing full credentials.
  */
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
@@ -54,10 +72,10 @@ router.get('/', async (req: AuthRequest, res, next) => {
       where: { companyId: req.companyId! },
       orderBy: { createdAt: 'desc' },
     });
-    // Strip credentials from the collection response.
     const data = integrations.map((i) => {
       const { credentials, ...rest } = i;
-      return rest;
+      const masked = maskCredentials(credentials);
+      return masked ? { ...rest, credentials: masked } : rest;
     });
     res.json({ data, count: data.length });
   } catch (err) {

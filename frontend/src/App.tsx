@@ -11,6 +11,9 @@ import Layout from './components/Layout';
 // Public pages — auth
 const LoginPage = lazy(() => import('./pages/Login'));
 const RegisterPage = lazy(() => import('./pages/Register'));
+const PortalPage = lazy(() => import('./pages/Portal'));
+const ScanLandingPage = lazy(() => import('./pages/marketing/ScanLanding'));
+const MarketingStudioPage = lazy(() => import('./pages/marketing/MarketingStudio'));
 
 // Protected pages — dashboard
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -22,6 +25,9 @@ const LeadDetail = lazy(() => import('./pages/leads/LeadDetail'));
 
 // Protected pages — jobs
 const JobsPage = lazy(() => import('./pages/Jobs'));
+const FieldHubPage = lazy(() => import('./pages/FieldHub'));
+const FieldSpacesPage = lazy(() => import('./pages/FieldSpaces'));
+const FieldSpaceDetailPage = lazy(() => import('./pages/FieldSpaceDetail'));
 const JobForm = lazy(() => import('./pages/jobs/JobForm'));
 const JobDetail = lazy(() => import('./pages/JobDetail'));
 const JobFeedComponent = lazy(() => import('./pages/JobFeed'));
@@ -73,6 +79,8 @@ function App() {
     >
       <Routes>
         {/* Public routes */}
+        <Route path="/portal" element={<PortalPage />} />
+        <Route path="/m/:code" element={<ScanLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
@@ -102,8 +110,16 @@ function App() {
             <Route path="new" element={<JobForm />} />
             <Route path=":id" element={<JobDetail />} />
             <Route path=":id/edit" element={<JobForm />} />
+            <Route path=":jobId/documents" element={<JobDocumentsPage />} />
             <Route path=":id/feed/*" element={<JobFeedRoute />} />
           </Route>
+
+          {/* Field Hub (operator) */}
+
+          <Route path="field" element={<FieldHubPage />} />
+          <Route path="spaces" element={<FieldSpacesPage />} />
+          <Route path="spaces/:spaceId" element={<FieldSpaceDetailPage />} />
+
 
           {/* Estimating */}
           <Route path="estimates">
@@ -116,11 +132,11 @@ function App() {
           <Route path="calendar" element={<CalendarPage />} />
 
           {/* Intelligence Command Center (Atlas Helios) */}
-          <Route path="command" element={<CommandCenterPage />} />
-          <Route path="intelligence/atlas" element={<AtlasIntelligencePage />} />
-          <Route path="intelligence/helios" element={<HeliosIntelligencePage />} />
-          <Route path="intelligence" element={<IntelligencePage />} />
-          <Route path="intelligence/system" element={<SystemIntelligencePage />} />
+          <Route path="command" element={<StormTrackingPage />} />
+          <Route path="intelligence/atlas" element={<Navigate to="/storm-tracking" replace />} />
+          <Route path="intelligence/helios" element={<Navigate to="/storm-tracking" replace />} />
+          <Route path="intelligence" element={<Navigate to="/storm-tracking" replace />} />
+          <Route path="intelligence/system" element={<Navigate to="/settings/ai" replace />} />
 
           {/* Storm Tracking (preserved from Atlas Helios) */}
           <Route path="storm-tracking" element={<StormTrackingPage />} />
@@ -131,6 +147,9 @@ function App() {
 
           {/* Reporting */}
           <Route path="reports" element={<ReportingPage />} />
+
+          {/* Marketing Studio */}
+          <Route path="marketing" element={<MarketingStudioPage />} />
 
           {/* Settings */}
           <Route path="settings/*" element={<SettingsPage />}>

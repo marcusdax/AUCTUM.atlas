@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import Button from '../components/ui/Button';
@@ -21,6 +22,9 @@ import {
   Clock,
   AlertCircle,
   Users,
+  Search,
+  BarChart3,
+  Briefcase,
 } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import toast from 'react-hot-toast';
@@ -86,6 +90,7 @@ const SOURCE_LABELS: Record<LeadSource, string> = {
   STORM_EVENT: 'Storm Event',
   MANUAL: 'Manual',
   IMPORT: 'Import',
+  MARKETING_QR: 'Marketing QR',
 };
 
 const SOURCE_VARIANTS: Record<LeadSource, BadgeVariant> = {
@@ -95,6 +100,7 @@ const SOURCE_VARIANTS: Record<LeadSource, BadgeVariant> = {
   STORM_EVENT: 'info',
   MANUAL: 'default',
   IMPORT: 'default',
+  MARKETING_QR: 'success',
 };
 
 const stormScoreVariant = (score?: number): BadgeVariant => {
@@ -461,6 +467,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ open, onOpenChange, initialData, on
                   <option value="STORM_EVENT">Storm Event</option>
                   <option value="MANUAL">Manual</option>
                   <option value="IMPORT">Import</option>
+                  <option value="MARKETING_QR">Marketing QR</option>
                 </select>
               </div>
 
@@ -651,8 +658,22 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ open, onOpenChange, lead, onUpd
                 <span className="block text-xs font-medium uppercase tracking-wider text-text-tertiary">
                   Storm Score
                 </span>
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <StormScoreBadge score={lead.score} />
+                  <Link
+                    to={`/storm-tracking?leadId=${lead.id}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-[hsl(var(--background-elevated))] px-2 py-1 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+                  >
+                    <Wind size={12} aria-hidden="true" />
+                    Inspect on Storm Map
+                  </Link>
+                  <Link
+                    to="/field"
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-[hsl(var(--background-elevated))] px-2 py-1 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+                  >
+                    <Briefcase size={12} aria-hidden="true" />
+                    Field Hub
+                  </Link>
                 </div>
               </div>
 
@@ -691,6 +712,17 @@ const LeadDetail: React.FC<LeadDetailProps> = ({ open, onOpenChange, lead, onUpd
 const Leads: React.FC = () => {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') ?? '';
+  const urlSource = searchParams.get('source') ?? '';
+  const [searchInput, setSearchInput] = useState(urlSearch);
+  const [sourceFilter, setSourceFilter] = useState<string>(urlSource);
+
+  useEffect(() => {
+    setSearchInput(urlSearch);
+    setSourceFilter(urlSource);
+  }, [urlSearch, urlSource]);
+
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -709,7 +741,18 @@ const Leads: React.FC = () => {
     placeholderData: { data: [], count: 0 },
   });
 
-  const leads = leadsData?.data ?? [];
+  const allLeads = leadsData?.data ?? [];
+  const leads = allLeads.filter((l) => {
+    if (sourceFilter && l.source !== sourceFilter) return false;
+    if (!searchInput.trim()) return true;
+    const q = searchInput.trim().toLowerCase();
+    return (
+      `${l.firstName} ${l.lastName}`.toLowerCase().includes(q) ||
+      l.propertyAddress.toLowerCase().includes(q) ||
+      (l.notes ?? '').toLowerCase().includes(q) ||
+      (l.stormEvent?.name ?? '').toLowerCase().includes(q)
+    );
+  });
 
   const updateLead = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Lead> }) =>
@@ -835,16 +878,92 @@ const Leads: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Leads</h1>
           <p className="text-text-secondary">
-            Manage your roofing leads from storm events and referrals.
+            Manage roofing leads converted from storm maps, inspections, and referrals.
           </p>
         </div>
-        <Button variant="primary" icon={<Plus size={18} />} onClick={openNewLead}>
-          New Lead
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/storm-tracking"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <Wind size={14} aria-hidden="true" />
+            Map &rarr; Leads Demo
+          </Link>
+          <Link
+            to="/field"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <Briefcase size={14} aria-hidden="true" />
+            Field Hub
+          </Link>
+          <Link
+            to="/reports?tab=pipeline"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <BarChart3 size={14} aria-hidden="true" />
+            Pipeline Report
+          </Link>
+          <Button variant="primary" icon={<Plus size={18} />} onClick={openNewLead}>
+            New Lead
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter & storm origin bar */}
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-[hsl(var(--background-elevated))] p-3">
+        <div className="relative flex-1 min-w-56">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" aria-hidden="true" />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchInput(val);
+              const next = new URLSearchParams(searchParams);
+              if (val) next.set('search', val);
+              else next.delete('search');
+              setSearchParams(next, { replace: true });
+            }}
+            placeholder="Filter leads by homeowner, street address, or storm event…"
+            className="input pl-9 py-1.5 text-sm"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const nextSource = sourceFilter === 'STORM_EVENT' ? '' : 'STORM_EVENT';
+            setSourceFilter(nextSource);
+            const next = new URLSearchParams(searchParams);
+            if (nextSource) next.set('source', nextSource);
+            else next.delete('source');
+            setSearchParams(next, { replace: true });
+          }}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            sourceFilter === 'STORM_EVENT'
+              ? 'border-primary bg-primary text-[hsl(var(--primary-foreground))]'
+              : 'border-border bg-[hsl(var(--background-card))] text-text-primary hover:bg-[hsl(var(--background-accent))]'
+          }`}
+        >
+          <Wind size={13} aria-hidden="true" />
+          Storm-Converted Only
+        </button>
+        {(searchInput || sourceFilter) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchInput('');
+              setSourceFilter('');
+              setSearchParams({}, { replace: true });
+            }}
+            className="text-xs text-text-secondary underline hover:text-text-primary"
+          >
+            Clear ({leads.length}/{allLeads.length})
+          </button>
+        )}
       </div>
 
       {isError ? (

@@ -501,6 +501,58 @@ class IntegrationService {
 
   // ── Dispatcher ─────────────────────────────────────────────
   async sync(ctx: SyncContext): Promise<SyncResult> {
+    const creds = (ctx.integration.credentials || {}) as Record<string, unknown>;
+    const settings = (ctx.integration.settings || {}) as Record<string, unknown>;
+    const apiKey = typeof creds.apiKey === 'string' ? creds.apiKey : '';
+    const isSandbox = settings.sandboxMode === true || apiKey.startsWith('sandbox_');
+
+    if (isSandbox) {
+      const address = (ctx.params?.address as string) || '412 Oak Ridge Pkwy, Plano, TX';
+      switch (ctx.integration.type) {
+        case IntegrationType.HOVER:
+        case IntegrationType.EAGLEVIEW:
+          return {
+            success: true,
+            type: ctx.integration.type,
+            synced: 1,
+            details: {
+              mode: 'SANDBOX',
+              address,
+              roofAreaSqFt: 2840,
+              pitch: '7/12',
+              facets: 11,
+              wasteFactorPct: 12,
+              note: 'Deterministic sandbox measurement fixture returned (no external billing call).',
+            },
+          };
+        case IntegrationType.ABC_SUPPLY:
+          return {
+            success: true,
+            type: ctx.integration.type,
+            synced: 3,
+            details: {
+              mode: 'SANDBOX',
+              entries: [
+                { name: 'GAF Timberline HDZ Charcoal (Sq)', category: 'Shingles', unit: 'SQ', unitCost: 118.5 },
+                { name: 'Synthetic Underlayment Roll', category: 'Underlayment', unit: 'ROLL', unitCost: 74.0 },
+                { name: 'Ice & Water Shield 2-Sq', category: 'Flashing', unit: 'ROLL', unitCost: 92.25 },
+              ],
+            },
+          };
+        default:
+          return {
+            success: true,
+            type: ctx.integration.type,
+            synced: 1,
+            details: {
+              mode: 'SANDBOX',
+              timestamp: new Date().toISOString(),
+              message: `Sandbox verification succeeded for ${ctx.integration.type}`,
+            },
+          };
+      }
+    }
+
     switch (ctx.integration.type) {
       case IntegrationType.QUICKBOOKS:
         return this.syncQuickbooks(ctx);

@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { aiApi } from '../../services/ai';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -18,6 +20,10 @@ import {
   Clock,
   AlertCircle,
   X,
+  KeyRound,
+  Activity,
+  MapPin,
+  BarChart3,
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card, { Badge } from '../../components/ui/Card';
@@ -27,7 +33,7 @@ import {
   IntegrationStatus,
 } from '../../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /* ===== Integration type configuration ===== */
 
@@ -267,7 +273,7 @@ const SettingsSummary: React.FC<SettingsSummaryProps> = ({ type, integration }) 
 interface ApiKeyFormProps {
   type: IntegrationType;
   integration?: Integration;
-  onSubmit: (data: { apiKey: string; label: string }) => void;
+  onSubmit: (data: { apiKey: string; label: string; sandboxMode: boolean }) => void;
   onCancel: () => void;
   isSubmitting: boolean;
 }
@@ -283,18 +289,41 @@ const ApiKeyForm: React.FC<ApiKeyFormProps> = ({
   const isEdit = !!integration;
   const [apiKey, setApiKey] = useState('');
   const [label, setLabel] = useState(integration?.credentials?.label as string || '');
+  const [sandboxMode, setSandboxMode] = useState(
+    Boolean((integration?.settings as Record<string, unknown> | undefined)?.sandboxMode)
+  );
+
+  const loadSandboxPreset = () => {
+    setApiKey(`sandbox_${type.toLowerCase()}_demo_2026`);
+    setLabel(`${config.name} Sandbox`);
+    setSandboxMode(true);
+    toast.success(`Loaded sandbox test preset for ${config.name}`);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim() && !isEdit) {
-      toast.error('Please enter an API key');
+      toast.error('Please enter an API key or load the sandbox preset');
       return;
     }
-    onSubmit({ apiKey: apiKey.trim(), label });
+    onSubmit({ apiKey: apiKey.trim(), label, sandboxMode });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-amber/30 bg-amber/10 px-3 py-2 text-xs">
+        <span className="text-text-primary">
+          Need sample credentials? Load a <strong>Test Mode Sandbox Key</strong>.
+        </span>
+        <button
+          type="button"
+          onClick={loadSandboxPreset}
+          className="shrink-0 rounded-md border border-amber/50 bg-[hsl(var(--background-card))] px-2.5 py-1 font-medium text-amber hover:bg-amber/20"
+        >
+          Load Sandbox Key
+        </button>
+      </div>
+
       {!isEdit && (
         <div className="flex items-start gap-3 rounded-lg bg-[hsl(var(--background-accent))] p-3 text-sm text-text-secondary">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0 text-amber" />
@@ -310,7 +339,7 @@ const ApiKeyForm: React.FC<ApiKeyFormProps> = ({
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          placeholder="Enter your API key"
+          placeholder="Enter your API key or click Load Sandbox Key"
           className="input w-full"
         />
         {isEdit && (
@@ -328,10 +357,20 @@ const ApiKeyForm: React.FC<ApiKeyFormProps> = ({
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. Production key"
+          placeholder="e.g. Production key or Sandbox"
           className="input w-full"
         />
       </div>
+
+      <label className="flex items-center gap-2 text-xs text-text-primary cursor-pointer">
+        <input
+          type="checkbox"
+          checked={sandboxMode}
+          onChange={(e) => setSandboxMode(e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-[hsl(var(--primary))]"
+        />
+        <span>Enable Test Mode / Sandbox simulation (no external billing calls)</span>
+      </label>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
@@ -580,9 +619,16 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
             <p className="text-sm text-text-secondary">{config.description}</p>
           </div>
         </div>
-        <Badge variant={getStatusBadgeVariant(integration?.status ?? 'DISCONNECTED')} size="sm">
-          {getStatusText(integration?.status ?? 'DISCONNECTED')}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge variant={getStatusBadgeVariant(integration?.status ?? 'DISCONNECTED')} size="sm">
+            {getStatusText(integration?.status ?? 'DISCONNECTED')}
+          </Badge>
+          {Boolean((integration?.settings as Record<string, unknown> | undefined)?.sandboxMode) && (
+            <Badge variant="warning" size="sm">
+              SANDBOX
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Status details */}
@@ -702,6 +748,44 @@ const IntegrationsSettings: React.FC = () => {
   const [oauthInfoOpen, setOauthInfoOpen] = useState(false);
   const [oauthInfoType, setOauthInfoType] = useState<IntegrationType | null>(null);
 
+  const [readProbe, setReadProbe] = useState<{
+    loading: boolean;
+    checkedAt?: string;
+    stormEvents?: number;
+    leads?: number;
+    aiEngine?: string;
+    offers?: number;
+    error?: string;
+  }>({ loading: false });
+
+  const runLiveReadCheck = useCallback(async () => {
+    setReadProbe({ loading: true });
+    try {
+      const [overviewRes, aiStatusRes, leadsRes, offersRes] = await Promise.all([
+        aiApi.stormOverview(7),
+        aiApi.status(),
+        api.get<{ count?: number; data?: unknown[] }>('/leads'),
+        api.get<{ data?: unknown[] }>('/field/offers'),
+      ]);
+      setReadProbe({
+        loading: false,
+        checkedAt: new Date().toLocaleTimeString(),
+        stormEvents: overviewRes.events?.length ?? 0,
+        leads: leadsRes.data?.count ?? leadsRes.data?.data?.length ?? 0,
+        aiEngine: aiStatusRes.localFallback?.engine || 'gateway-ready',
+        offers: offersRes.data?.data?.length ?? 0,
+      });
+      toast.success('Live telemetry & CRM data read succeeded');
+    } catch (err) {
+      setReadProbe({
+        loading: false,
+        checkedAt: new Date().toLocaleTimeString(),
+        error: err instanceof Error ? err.message : 'Read probe failed',
+      });
+      toast.error('Failed to read live telemetry');
+    }
+  }, []);
+
   /* === OAuth popup === */
 
   const openOAuthPopup = useCallback(
@@ -782,9 +866,10 @@ const IntegrationsSettings: React.FC = () => {
 
   const handleSync = (id: string) => {
     syncMutation.mutate(id, {
-      onSuccess: () => {
+      onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: ['integrations'] });
-        toast.success('Sync started successfully');
+        const mode = (res?.data as { details?: { mode?: string } } | undefined)?.details?.mode;
+        toast.success(mode === 'SANDBOX' ? 'Sandbox test sync succeeded' : 'Sync completed successfully');
       },
       onError: () => toast.error('Failed to start sync'),
     });
@@ -802,7 +887,7 @@ const IntegrationsSettings: React.FC = () => {
 
   /* === Form submit handlers === */
 
-  const handleApiKeySubmit = (data: { apiKey: string; label: string }) => {
+  const handleApiKeySubmit = (data: { apiKey: string; label: string; sandboxMode: boolean }) => {
     if (!apiKeyType) return;
 
     const integration = findIntegration(apiKeyType);
@@ -815,6 +900,10 @@ const IntegrationsSettings: React.FC = () => {
     const payload: Record<string, unknown> = {
       type: apiKeyType,
       status: 'ACTIVE',
+      settings: {
+        ...((integration?.settings as Record<string, unknown> | undefined) ?? {}),
+        sandboxMode: data.sandboxMode,
+      },
     };
     if (Object.keys(credentials).length > 0) {
       payload.credentials = credentials;
@@ -876,15 +965,98 @@ const IntegrationsSettings: React.FC = () => {
     }
   };
 
+  const apiKeyConnected = integrations.filter(
+    (i) =>
+      INTEGRATION_CONFIG[i.type]?.connectMethod === 'apikey' &&
+      i.status === 'ACTIVE'
+  ).length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-text-primary">Integrations</h1>
-        <p className="mt-1 text-text-secondary">
-          Connect your tools and services to streamline your roofing workflow.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Integrations &amp; API Keys</h1>
+          <p className="mt-1 text-text-secondary">
+            Manage measurement, supplier, calendar, and webhook API keys—plus verify live read telemetry across Storm Intel and Field Hub.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/settings/ai"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <KeyRound size={14} aria-hidden="true" />
+            AI Provider Keys
+          </Link>
+          <Link
+            to="/storm-tracking"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <MapPin size={14} aria-hidden="true" />
+            Map &rarr; Leads Demo
+          </Link>
+          <Link
+            to="/reports"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[hsl(var(--background-elevated))] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[hsl(var(--background-accent))]"
+          >
+            <BarChart3 size={14} aria-hidden="true" />
+            Reports
+          </Link>
+        </div>
       </div>
+
+      {/* Live API Key & Data Read Diagnostics */}
+      <Card
+        title="API Key Health & Live Data Read"
+        subtitle={`${apiKeyConnected}/3 API-key providers connected · ${integrations.filter((i) => i.status === 'ACTIVE').length} total integrations active`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+            <div className="rounded-lg bg-[hsl(var(--background-accent))]/60 px-3 py-2">
+              <span className="block text-text-tertiary">Storm Events (7d)</span>
+              <span className="font-mono text-base font-semibold text-text-primary">
+                {readProbe.stormEvents ?? '—'}
+              </span>
+            </div>
+            <div className="rounded-lg bg-[hsl(var(--background-accent))]/60 px-3 py-2">
+              <span className="block text-text-tertiary">Scored Leads</span>
+              <span className="font-mono text-base font-semibold text-text-primary">
+                {readProbe.leads ?? '—'}
+              </span>
+            </div>
+            <div className="rounded-lg bg-[hsl(var(--background-accent))]/60 px-3 py-2">
+              <span className="block text-text-tertiary">Field Offers</span>
+              <span className="font-mono text-base font-semibold text-text-primary">
+                {readProbe.offers ?? '—'}
+              </span>
+            </div>
+            <div className="rounded-lg bg-[hsl(var(--background-accent))]/60 px-3 py-2">
+              <span className="block text-text-tertiary">AI Engine</span>
+              <span className="font-mono text-xs font-semibold text-text-primary">
+                {readProbe.aiEngine ?? 'Click verify'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Activity size={14} />}
+              onClick={runLiveReadCheck}
+              isLoading={readProbe.loading}
+            >
+              Verify Live Data Reads
+            </Button>
+            {readProbe.checkedAt && (
+              <span className="font-mono text-[11px] text-text-tertiary">
+                {readProbe.error ? `Error: ${readProbe.error}` : `Verified at ${readProbe.checkedAt}`}
+              </span>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* Error state */}
       {error && (
