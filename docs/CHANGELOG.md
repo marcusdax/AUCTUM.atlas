@@ -43,6 +43,23 @@ the project aims at semantic versioning once public.
   resolution retained.
 
 ### Fixed
+- **Session restore**: `GET /auth/me` was mounted without the auth middleware and always returned
+  401, so every page reload logged users out. Now protected and covered by the smoke test.
+- `/storms/events` was shadowed by `GET /storms/:id`; the static collection route now resolves.
+- Malformed JSON bodies returned 500 from the global handler; now 400 `INVALID_JSON`
+  (and 413 `PAYLOAD_TOO_LARGE` for oversized bodies).
+- **Reports page no longer crashes**: the reporting APIs now return the field contract the UI reads
+  (`leadsByStatus`, `jobs[]`, `phaseDistribution`, `crewProductivity[]`, …) while keeping the export shape.
+- Added missing `GET /intelligence/dashboard`, `GET /maps/property-intelligence` and
+  `GET /maps/storm-trajectories` that the dashboard and map already expected (were 404).
+- Dashboard requested a non-existent `/storm-events`; corrected to `/storms/events`.
+- NOAA sync persisted every national alert; it now keeps only clusters over the company's
+  geocoded footprint (250 km margin) or the 12 worst while no footprint exists — the contractor's
+  own storm events stay visible and the map GeoJSON is meaningful.
+- Login page no longer auto-fills/displays `admin@roofpro.com / admin@123`; a deliberate
+  "Try the demo workspace" action replaces it.
+- `/api/analytics/vitals` web-vitals beacon returned 404 on every page; now a 204 ingest.
+- AI status badge no longer claims "7 providers" when none are configured (shows "offline engine").
 - Local host access to the compose Postgres (documented credentials via `.env`);
   `docker-entrypoint` keeps applying schema on boot.
 

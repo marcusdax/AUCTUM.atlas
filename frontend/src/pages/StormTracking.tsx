@@ -211,7 +211,10 @@ const StormTracking: React.FC = () => {
       : aiStatus?.enabled === false
         ? 'AI gateway disabled'
         : 'AI online';
-  const aiProviderCount = aiStatus?.providers?.filter((provider) => provider.enabled).length ?? 0;
+  // Count only providers with a key configured: the catalog lists every supported
+  // provider, but "AI online · 7 providers" must not imply 7 usable keys.
+  const aiConfiguredProviderCount =
+    aiStatus?.providers?.filter((provider) => provider.enabled && provider.configured).length ?? 0;
   const aiStatusVariant: BadgeVariant = aiStatusLoading
     ? 'info'
     : aiStatusError
@@ -244,8 +247,10 @@ const StormTracking: React.FC = () => {
                 />
               )}
               {aiStatusLabel}
-              {!aiStatusError && aiStatus?.enabled !== false && aiProviderCount > 0
-                ? ` · ${aiProviderCount} provider${aiProviderCount === 1 ? '' : 's'}`
+              {!aiStatusError && aiStatus?.enabled !== false
+                ? aiConfiguredProviderCount > 0
+                  ? ` · ${aiConfiguredProviderCount} provider${aiConfiguredProviderCount === 1 ? '' : 's'}`
+                  : ' · offline engine'
                 : ''}
             </span>
           </Badge>

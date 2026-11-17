@@ -7,6 +7,9 @@ import { Router } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { authMiddleware } from '../middleware/auth';
 import noaaService, { SEVERITY_COLORS } from '../services/NOAAWeatherService';
+import { prisma } from '../prisma';
+import { normalizeGeometry } from '../services/storm/geo';
+import { extractLatLng } from '../services/storm/impact';
 
 const router = Router();
 router.use(authMiddleware);
@@ -221,5 +224,166 @@ function getStormIcon(type: string): string {
   }
   return 'exclamation-circle';
 }
+
+/** Title-case a Prisma severity enum for the map UI ('EXTREME' -> 'Extreme'). */
+function severityTitle(value: string): string {
+  const lower = String(value || '').toLowerCase();
+  return lower ? lower.charAt(0).toUpperCase() + lower.slice(1) : 'Unknown';
+}
+
+/** Pull the first ring of a Polygon / MultiPolygon as Leaflet [lat,lng] pairs. */
+function firstRing(geometry: unknown): Array<[number, number]> {
+  const normalized = normalizeGeometry(geometry) as
+    | { type?: string; coordinates?: unknown }
+    | null
+    | undefined;
+  if (!normalized || !normalized.coordinates) return [];
+  const coordinates = normalized.coordinates as unknown;
+  let ring: unknown = coordinates;
+  if (normalized.type === 'Polygon') ring = (coordinates as unknown[][])[0];
+  else if (normalized.type === 'MultiPolygon') ring = ((coordinates as unknown[][][])[0] || [])[0];
+  if (!Array.isArray(ring)) return [];
+  const points: Array<[number, number]> = [];
+  for (const pair of ring) {
+    if (!Array.isArray(pair) || pair.length < 2) continue;
+    const lng = Number(pair[0]);
+    const lat = Number(pair[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) points.push([lat, lng]);
+  }
+  return points;
+}
+
+/**
+ * GET /maps/storm-trajectories — company storm-event tracks for the animated
+ * trajectory layer (derived from persisted StormEvent geometry; no fake data).
+ */
+router.get('/storm-trajectories', async (req: AuthRequest, res, next) => {
+  try {
+    const rows = await prisma.stormEvent.findMany({
+      where: { companyId: req.user!.companyId },
+      orderBy: { startDate: 'desc' },
+      take: 25,
+      select: { id: true, name: true, severity: true, startDate: true, geometry: true, metadata: true },
+    });
+
+    const trajectories = rows.flatMap((row) => {
+      const coordinates = firstRing(row.geometry);
+      if (coordinates.length < 2) return [];
+      const metadata = (row.metadata && typeof row.metadata === 'object' ? row.metadata : {}) as Record<
+        string,
+        unknown
+      >;
+      const speed = Number(metadata.speed);
+      const direction = Number(metadata.direction);
+      return [
+        {
+          id: `trajectory:${row.id}`,
+          stormId: row.id,
+          name: row.name,
+          coordinates,
+          severity: severityTitle(row.severity),
+          timestamp: row.startDate.toISOString(),
+          ...(Number.isFinite(speed) ? { speed } : {}),
+          ...(Number.isFinite(direction) ? { direction } : {}),
+        },
+      ];
+    });
+
+    res.json({ trajectories, count: trajectories.length, timestamp: new Date().toISOString() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /maps/property-intelligence — geocoded leads/jobs as map risk nodes.
+ * Tenant-scoped; risk comes from the persisted deterministic storm-impact score.
+ */
+router.get('/property-intelligence', async (req: AuthRequest, res, next) => {
+  try {
+    const companyId = req.user!.companyId;
+    const [leads, jobs] = await Promise.all([
+      prisma.lead.findMany({
+        where: { companyId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          propertyAddress: true,
+          propertyLatLng: true,
+          stormImpactScore: true,
+          status: true,
+        },
+        take: 250,
+      }),
+      prisma.job.findMany({
+        where: { companyId },
+        select: { id: true, name: true, propertyAddress: true, propertyLatLng: true, phase: true },
+        take: 150,
+      }),
+    ]);
+
+    const properties: Array<Record<string, unknown>> = [];
+    const pushPoint = (
+      id: string,
+      address: string | null | undefined,
+      latLng: unknown,
+      riskScore: number,
+      metadata: Record<string, unknown>
+    ) => {
+      const point = extractLatLng(latLng);
+      if (!point) return;
+      properties.push({
+        id,
+        lat: point.lat,
+        lng: point.lng,
+        address: address || 'Unknown address',
+        propertyType: 'Residential',
+        riskScore: Math.max(0, Math.min(100, Math.round(riskScore))),
+        status: 'LIVE',
+        lastSync: new Date().toISOString(),
+        metadata,
+      });
+    };
+
+    for (const lead of leads) {
+      pushPoint(
+        `lead:${lead.id}`,
+        lead.propertyAddress,
+        lead.propertyLatLng,
+        Number(lead.stormImpactScore) || 0,
+        { kind: 'lead', leadId: lead.id, leadStatus: lead.status }
+      );
+    }
+    for (const job of jobs) {
+      pushPoint(`job:${job.id}`, job.propertyAddress, job.propertyLatLng, 0, {
+        kind: 'job',
+        jobId: job.id,
+        jobPhase: job.phase,
+      });
+    }
+
+    const lats = properties.map((p) => Number(p.lat));
+    const lngs = properties.map((p) => Number(p.lng));
+    const bounds =
+      properties.length > 0
+        ? {
+            north: Math.max(...lats),
+            south: Math.min(...lats),
+            east: Math.max(...lngs),
+            west: Math.min(...lngs),
+          }
+        : null;
+
+    res.json({
+      properties,
+      count: properties.length,
+      bounds,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

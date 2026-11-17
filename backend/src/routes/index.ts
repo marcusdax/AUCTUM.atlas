@@ -20,6 +20,7 @@ import subcontractorRoutes from './subcontractors.routes';
 import reportRoutes from './reports.routes';
 import aiRoutes from './ai.routes';
 import stormIntelRoutes from './stormIntel.routes';
+import intelligenceRoutes from './intelligence.routes';
 
 // Health check route (no auth required)
 const healthRouter = Router();
@@ -72,6 +73,7 @@ v1Router.use('/reports', reportRoutes);
 // AI gateway (FreeLLMAPI-compatible) + storm intelligence
 v1Router.use('/ai', aiRoutes);
 v1Router.use('/storm-intel', stormIntelRoutes);
+v1Router.use('/intelligence', intelligenceRoutes);
 
 // Root endpoint
 v1Router.get('/', (req, res) => {

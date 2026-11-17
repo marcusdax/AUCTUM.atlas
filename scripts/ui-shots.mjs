@@ -26,6 +26,11 @@ const API = arg('--api', 'http://localhost:5000');
 const OUT = resolve(arg('--out', 'runs/shots'));
 const EMAIL = arg('--email', 'demo@roofprocrm.com');
 const PASSWORD = arg('--password', 'RoofPro!2026');
+const DEBUG = args.includes('--debug');
+const FULL = args.includes('--full');
+const SCROLL = Number(arg('--scroll', '0')) || 0;
+const ONLY = arg('--only', '');
+const EVAL = arg('--eval', '');
 const PORT = 9222;
 const VIEWPORT = { width: 1440, height: 900 };
 
@@ -80,12 +85,19 @@ class Cdp {
     this.ws = ws;
     this.id = 0;
     this.pending = new Map();
+    this.events = [];
     ws.addEventListener('message', (ev) => {
       let msg;
       try {
         msg = JSON.parse(ev.data);
       } catch {
         return;
+      }
+      if (msg.method === 'Network.responseReceived') {
+        const url = msg.params?.response?.url || '';
+        if (url.includes('/api/v1/ai/')) this.events.push(msg);
+      } else if (msg.method && (msg.method.startsWith('Runtime.exception') || msg.method.startsWith('Log.'))) {
+        this.events.push(msg);
       }
       if (msg.id && this.pending.has(msg.id)) {
         const { resolve, reject } = this.pending.get(msg.id);
@@ -154,6 +166,8 @@ async function main() {
     const cdp = new Cdp(ws);
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
+    await cdp.send('Log.enable');
+    await cdp.send('Network.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride', {
       width: VIEWPORT.width,
       height: VIEWPORT.height,
@@ -162,19 +176,59 @@ async function main() {
     });
 
     async function setAuthAndNavigate(path, name, waitMs = 3500) {
+      // The app persists auth in Zustand (`roofpro-auth`) AND raw tokens that the
+      // axios interceptor reads. Seed both before reloading the protected route.
+      const persistedUser = {
+        ...(auth.user || {}),
+        company: auth.company || auth.user?.company || undefined,
+      };
+      const persistedStore = JSON.stringify({
+        state: {
+          user: persistedUser,
+          accessToken: auth.accessToken,
+          refreshToken: auth.refreshToken || null,
+          isAuthenticated: true,
+          isLoading: false,
+        },
+        version: 0,
+      });
       await cdp.send('Page.navigate', { url: `${BASE}${path}` });
       await sleep(1200);
-      await cdp.send('Runtime.evaluate', {
+      const injected = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
+          localStorage.setItem('roofpro-auth', ${JSON.stringify(persistedStore)});
           localStorage.setItem('accessToken', ${JSON.stringify(auth.accessToken)});
           localStorage.setItem('refreshToken', ${JSON.stringify(auth.refreshToken || '')});
           localStorage.setItem('roofpro.onboarding.v1', JSON.stringify({ version: 1, completed: true, skipped: true, lastStep: 0 }));
-          return true;
+          return JSON.stringify({ href: location.href, keys: Object.keys(localStorage), store: (localStorage.getItem('roofpro-auth') || '').slice(0, 120) });
         })()`,
+        returnByValue: true,
       });
+      if (DEBUG) console.log(`[debug] injection @ ${path}:`, injected.result?.value);
       await cdp.send('Page.navigate', { url: `${BASE}${path}` });
       await sleep(waitMs);
-      const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      if (SCROLL > 0) {
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            const main = document.querySelector('main');
+            if (main) main.scrollTop = ${SCROLL};
+            window.scrollTo(0, ${SCROLL});
+            return true;
+          })()`,
+        });
+        await sleep(900);
+      }
+      if (DEBUG) {
+        const state = await cdp.send('Runtime.evaluate', {
+          expression: `JSON.stringify({ href: location.href, title: document.title, text: (document.body && document.body.innerText || '').replace(/\\s+/g, ' ').slice(0, 160) })`,
+          returnByValue: true,
+        });
+        console.log(`[debug] after nav ${path}:`, state.result?.value);
+      }
+      const shot = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: FULL,
+      });
       const file = join(OUT, `${name}.png`);
       writeFileSync(file, Buffer.from(shot.data, 'base64'));
       console.log(`[shots] saved ${file}`);
@@ -196,7 +250,7 @@ async function main() {
       ['/estimates', '07-estimates'],
       ['/reports', '08-reports'],
       ['/settings/ai', '09-ai-gateway'],
-    ];
+    ].filter(([, name]) => !ONLY || name.includes(ONLY));
     for (const [path, name] of pages) {
       try {
         await setAuthAndNavigate(path, name);
@@ -204,7 +258,29 @@ async function main() {
         console.error(`[shots] ${name} failed: ${err.message}`);
       }
     }
+    if (EVAL) {
+      // Evaluate in the last-loaded page context (handy for diagnosing API calls).
+      const result = await cdp.send('Runtime.evaluate', {
+        expression: EVAL,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      console.log('[eval]', JSON.stringify(result.result?.value ?? result.result).slice(0, 2000));
+    }
     ws.close();
+    if (DEBUG) {
+      console.log('[debug] page runtime events:');
+      for (const event of cdp.events.slice(-20)) {
+        if (event.method === 'Runtime.exceptionThrown') {
+          const details = event.params?.exceptionDetails || {};
+          const description = details.exception?.description || details.text || '';
+          console.log('  exception:', String(description).slice(0, 900));
+        } else {
+          const text = JSON.stringify(event.params || {}).slice(0, 300);
+          console.log('  ', event.method, text);
+        }
+      }
+    }
     console.log(`[shots] done -> ${OUT}`);
   } finally {
     cleanup();

@@ -174,6 +174,23 @@ io.on('connection', (socket) => {
 // Make io available to route handlers (set before route handlers run)
 app.set('io', io);
 
+// ─── Web-vitals ingest (sendBeacon, unauthenticated, best-effort) ─────
+app.post('/api/analytics/vitals', (req, res) => {
+  const metric = req.body && typeof req.body === 'object' ? req.body : {};
+  const name = typeof metric.name === 'string' ? metric.name.slice(0, 16) : 'unknown';
+  const value = Number(metric.value);
+  if (Number.isFinite(value) && Number.isFinite(Number(metric.timestamp))) {
+    logger.debug('web-vital', {
+      name,
+      value: Math.round(value * 100) / 100,
+      rating: typeof metric.rating === 'string' ? metric.rating.slice(0, 16) : undefined,
+      navigationType: typeof metric.navigationType === 'string' ? metric.navigationType.slice(0, 24) : undefined,
+      url: typeof metric.url === 'string' ? metric.url.slice(0, 300) : undefined,
+    });
+  }
+  res.status(204).end();
+});
+
 // ─── API Routes ──────────────────────────────────────────
 app.use('/api/v1', v1Router);
 

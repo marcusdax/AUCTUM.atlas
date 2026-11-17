@@ -224,9 +224,27 @@ async function computePipeline(companyId: string, range: DateRange) {
   const conversionRate = totalLeads > 0 ? round((wonCount / totalLeads) * 100, 2) : 0;
   const winRate = wonCount + lostCount > 0 ? round((wonCount / (wonCount + lostCount)) * 100, 2) : 0;
 
+  // UI contract (frontend/src/types → PipelineReport): the reporting page reads
+  // these top-level fields; `data`/`summary` stay for CSV/PDF export.
+  const leadsByStatus: Record<string, number> = Object.fromEntries(
+    data.map((bucket) => [bucket.status, bucket.count])
+  );
+  const approvedEstimateCount = await prisma.estimate.count({
+    where: { companyId, status: 'APPROVED' },
+  });
+
   return {
     type: 'pipeline',
+    startDate: range.gte ? range.gte.toISOString() : '',
+    endDate: range.lte ? range.lte.toISOString() : '',
     data,
+    totalLeads,
+    leadsByStatus,
+    conversionRate,
+    won: wonCount,
+    lost: lostCount,
+    totalDealValue: round(totalValue, 2),
+    approvedEstimateCount,
     summary: {
       totalLeads,
       totalValue: round(totalValue, 2),
@@ -284,7 +302,6 @@ async function computeProfitability(companyId: string, range: DateRange) {
     },
     orderBy: { createdAt: 'desc' },
   });
-
   const data = jobs.map((j) => {
     const budget = j.budget ?? 0;
     const actualCost = j.actualCost ?? 0;
@@ -318,10 +335,37 @@ async function computeProfitability(companyId: string, range: DateRange) {
 
   return {
     type: 'profitability',
+    startDate: range.gte ? range.gte.toISOString() : '',
+    endDate: range.lte ? range.lte.toISOString() : '',
     data,
+    // UI contract (frontend/src/types → ProfitabilityReport).
+    jobs: jobs.map((j) => {
+      const budget = j.budget ?? 0;
+      const actualCost = j.actualCost ?? 0;
+      const grossProfit = j.grossProfit ?? round(budget - actualCost, 2);
+      return {
+        id: j.id,
+        name: j.name,
+        leadName: '',
+        status: j.status,
+        phase: j.phase,
+        startDate: j.startDate ? j.startDate.toISOString() : null,
+        endDate: j.endDate ? j.endDate.toISOString() : null,
+        budget: round(budget, 2),
+        cost: round(actualCost, 2),
+        revenue: round(budget, 2),
+        margin: budget > 0 ? round((grossProfit / budget) * 100, 2) : 0,
+        leadStatus: null,
+      };
+    }),
     summary: {
       totalJobs: totals._count._all,
       totalBudget: round(totalBudget, 2),
+      // UI-facing aliases
+      totalCost: round(totalActualCost, 2),
+      totalRevenue: round(totalBudget, 2),
+      totalMargin: round(totalGrossProfit, 2),
+      // existing export fields
       totalActualCost: round(totalActualCost, 2),
       totalGrossProfit: round(totalGrossProfit, 2),
       avgMarginPercent,
@@ -464,12 +508,47 @@ async function computeProductionEfficiency(companyId: string, range: DateRange) 
     orderBy: { status: 'asc' },
   });
 
+  // Crew detail for the UI table (names resolved from the user table).
+  const workerIds = Array.from(jobsPerUser.keys());
+  const workerRows = workerIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: workerIds } },
+        select: { id: true, firstName: true, lastName: true, role: true },
+      })
+    : [];
+  const workerById = new Map(workerRows.map((w) => [w.id, w]));
+  const crewProductivityDetail = workerIds
+    .map((userId) => {
+      const worker = workerById.get(userId);
+      return {
+        id: userId,
+        name: worker ? `${worker.firstName} ${worker.lastName}`.trim() : userId,
+        role: worker?.role ?? 'CREW',
+        jobsAssigned: jobsPerUser.get(userId)?.size ?? 0,
+      };
+    })
+    .sort((a, b) => b.jobsAssigned - a.jobsAssigned);
+
+  const phaseDistribution: Record<string, number> = Object.fromEntries(
+    jobsByPhase.map((bucket) => [bucket.phase, bucket._count._all])
+  );
+  const totalJobs = jobsByPhase.reduce((sum, bucket) => sum + bucket._count._all, 0);
+
   return {
     type: 'production-efficiency',
+    startDate: range.gte ? range.gte.toISOString() : '',
+    endDate: range.lte ? range.lte.toISOString() : '',
     jobsCompletedPerPeriod,
     avgDaysToComplete,
     avgTimePerPhase,
-    crewProductivity: {
+    // UI contract (frontend/src/types → ProductionEfficiencyReport)
+    completedJobsCount: completed.length,
+    totalJobs,
+    avgCycleTimeDays: avgDaysToComplete,
+    phaseDistribution,
+    crewProductivity: crewProductivityDetail,
+    // Export/legacy aggregate kept for CSV/PDF summaries.
+    crewSummary: {
       totalCompletedJobs: completed.length,
       totalAssignments: assignees.length,
       uniqueWorkers,
@@ -592,14 +671,15 @@ function getReportFields(type: string, report: any): ExportTable[] {
       p.eventCount,
     ]),
   });
+  const crew = report.crewSummary ?? report.crewProductivity ?? {};
   tables.push({
     title: 'Crew Productivity',
     headers: ['Metric', 'Value'],
     rows: [
-      ['Total Completed Jobs', report.crewProductivity.totalCompletedJobs],
-      ['Total Assignments', report.crewProductivity.totalAssignments],
-      ['Unique Workers', report.crewProductivity.uniqueWorkers],
-      ['Avg Jobs Per Worker', report.crewProductivity.avgJobsPerWorker],
+      ['Total Completed Jobs', crew.totalCompletedJobs ?? report.completedJobsCount ?? 0],
+      ['Total Assignments', crew.totalAssignments ?? 0],
+      ['Unique Workers', crew.uniqueWorkers ?? 0],
+      ['Avg Jobs Per Worker', crew.avgJobsPerWorker ?? 0],
       ['Avg Days To Complete', report.avgDaysToComplete],
     ],
   });
@@ -745,3 +825,4 @@ export {
 };
 
 export default router;
+

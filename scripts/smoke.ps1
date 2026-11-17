@@ -4,9 +4,10 @@
   RoofPro CRM — post-launch smoke test.
 
 .DESCRIPTION
-  Exercises the live stack end-to-end: health, auth, CRM, storm intelligence and the
-  AI gateway (storm brief + map copilot + lead insights + provider status). Writes a
-  JSON report to runs/ for evidence. Exits non-zero if any required check fails.
+  Exercises the live stack end-to-end: health, auth/session restore, CRM, storm
+  intelligence and the AI gateway (storm brief + map copilot + lead insights +
+  provider status). Writes a JSON report to runs/ for evidence. Exits non-zero
+  if any required check fails.
 
 .EXAMPLE
   pwsh -File scripts/smoke.ps1
@@ -27,7 +28,6 @@ Set-Location $Root
 $results = [System.Collections.Generic.List[object]]::new()
 $token = $null
 $leadId = $null
-$stormId = $null
 $demoEmail = 'demo@roofprocrm.com'
 
 function Record($name, $status, $detail) {
@@ -47,10 +47,10 @@ function Invoke-Api {
   if ($script:token) { $headers['Authorization'] = "Bearer $($script:token)" }
   try {
     $params = @{
-      Method      = $Method
-      Uri         = "$Api/api/v1$Path"
-      Headers     = $headers
-      TimeoutSec  = 45
+      Method          = $Method
+      Uri             = "$Api/api/v1$Path"
+      Headers         = $headers
+      TimeoutSec      = 45
       UseBasicParsing = $true
     }
     if ($null -ne $Body) { $params['Body'] = ($Body | ConvertTo-Json -Depth 12 -Compress) }
@@ -108,6 +108,12 @@ try {
   Record 'auth' 'FAIL' $_.Exception.Message
 }
 
+# 3b. Session restore — same path the SPA uses on every page reload
+try {
+  $r = Invoke-Api -Path '/auth/me'
+  Record 'auth session restore' 'PASS' "user=$($r.data.user.email) company=$($r.data.user.company.name)"
+} catch { Record 'auth session restore' 'FAIL' $_.Exception.Message }
+
 # 4. CRM
 try {
   $r = Invoke-Api -Path '/leads?limit=5'
@@ -126,6 +132,21 @@ try {
   Record 'calendar events' 'PASS' "$(@($r.data.data).Count) event(s) returned"
 } catch { Record 'calendar events' 'FAIL' $_.Exception.Message }
 
+try {
+  $r = Invoke-Api -Path '/intelligence/dashboard'
+  Record 'intelligence dashboard' 'PASS' "leads=$($r.data.crm.leads.total) jobs=$($r.data.crm.jobs.total) risk=$($r.data.riskIndex)"
+} catch { Record 'intelligence dashboard' 'FAIL' $_.Exception.Message }
+
+try {
+  $r = Invoke-Api -Path '/maps/property-intelligence'
+  Record 'map property nodes' 'PASS' "$($r.data.count) node(s)"
+} catch { Record 'map property nodes' 'FAIL' $_.Exception.Message }
+
+try {
+  $r = Invoke-Api -Path '/maps/storm-trajectories'
+  Record 'map trajectories' 'PASS' "$($r.data.count) trajectory(ies)"
+} catch { Record 'map trajectories' 'FAIL' $_.Exception.Message }
+
 # 5. Storm tracking (NOAA)
 try {
   $r = Invoke-Api -Path '/storms/active'
@@ -135,9 +156,13 @@ try {
 }
 
 try {
+  $r = Invoke-Api -Path '/storms/events'
+  Record 'storm events collection' 'PASS' "$(@($r.data.events).Count) event(s)"
+} catch { Record 'storm events collection' 'FAIL' $_.Exception.Message }
+
+try {
   $r = Invoke-Api -Path '/storm-intel/overview?days=7'
   $events = @($r.data.events)
-  if ($events.Count -gt 0) { $script:stormId = $events[0].id }
   Record 'storm-intel overview' 'PASS' "$($events.Count) event(s)"
 } catch { Record 'storm-intel overview' 'FAIL' $_.Exception.Message }
 

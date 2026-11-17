@@ -192,5 +192,7 @@ cd ..; npm run smoke          # after `npm run launch`
 node scripts/ui-shots.mjs     # optional screenshots into runs/shots
 ```
 
-Evidence for the current release is recorded in `docs/CHANGELOG.md` and the runbook's
+**Executed results** (96 backend tests, 175 frontend tests, 23/23 smoke checks, screenshots) and the
+defects fixed during verification are recorded in [`RELEASE_VERIFICATION.md`](RELEASE_VERIFICATION.md).
+Evidence for the release is also listed in [`CHANGELOG.md`](CHANGELOG.md) and the runbook's
 "Verification" section.

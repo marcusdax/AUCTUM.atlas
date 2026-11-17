@@ -804,7 +804,14 @@ const Dashboard: React.FC = () => {
 
   const stormEventsQuery = useQuery({
     queryKey: ['dashboard', 'storm-events'],
-    queryFn: () => api.get('/storm-events').then((res) => res.data as ListResponse<StormEvent>),
+    queryFn: () =>
+      api.get('/storms/events').then(
+        (res) =>
+          ({
+            data: (res.data.events ?? []) as StormEvent[],
+            count: (res.data.count ?? 0) as number,
+          }) as ListResponse<StormEvent>
+      ),
     placeholderData: { data: [], count: 0 },
     staleTime: 60_000,
     refetchInterval: 120_000,

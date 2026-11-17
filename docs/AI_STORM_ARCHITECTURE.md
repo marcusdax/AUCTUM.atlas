@@ -230,6 +230,11 @@ export interface ImpactResult {
   Location: `Lead.propertyLatLng` (`{lat,lng}` or `{lat,lon}`).
 - **No NOAA network → cached events.** `sync` failures must not 500; return
   `{created:0, updated:0, events:[...cached]}`.
+- **Company footprint filter (v1.1):** NOAA publishes national alerts; a contractor only cares about
+  their own book. `syncNoaaEvents` keeps clusters intersecting the bbox of the company's geocoded
+  leads/jobs expanded by 1.5°, or within 250 km of any point. A company with no coordinates gets the
+  12 most severe clusters instead of the whole feed. This keeps `overview`/`events.geojson` meaningful
+  and idempotent syncs from accumulating national noise.
 - **Seed script** (`npm run seed:demo`) creates a demo company, 5 users (password
   `RoofPro!2026`), ~24 leads with coordinates, 8 jobs, estimates + items, calendar events,
   feed posts, 3 storm events (manual, with geometry), and 2 AI usage rows. Idempotent:

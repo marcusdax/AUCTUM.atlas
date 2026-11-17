@@ -128,7 +128,10 @@ router.post('/logout', async (req, res, next) => {
 });
 
 // GET /auth/me
-router.get('/me', async (req: AuthRequest, res, next) => {
+// NOTE: /auth is mounted before the global auth middleware, so the route must
+// attach authMiddleware itself — without it req.user is always undefined and a
+// page reload would log the user out (fixed in v1.1).
+router.get('/me', authMiddleware, async (req: AuthRequest, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Not authenticated' });

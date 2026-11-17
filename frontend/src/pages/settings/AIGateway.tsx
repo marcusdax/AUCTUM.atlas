@@ -867,7 +867,7 @@ const AIGateway: React.FC = () => {
                 <p className="text-xs text-red">{describeAiError(usageQuery.error)}</p>
               ) : null}
               <UsageSummary today={today} last7d={last7d} byProvider={byProvider} />
-              {isAiOfflineError(usageQuery.error) && (
+              {!usageQuery.data && isAiOfflineError(usageQuery.error) && (
                 <p className="mt-2 text-xs text-text-tertiary">
                   Detailed usage analytics are unavailable on this deployment — showing the status
                   snapshot instead.

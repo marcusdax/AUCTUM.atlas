@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthProvider';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import { AlertCircle, Eye, EyeOff, Lock, LogIn, Mail } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Lock, LogIn, Mail, Sparkles } from 'lucide-react';
 
 const inputClassName =
   'input pl-10 focus:border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/30';
+
+/** Demo workspace created by `npm run seed:demo`; safe to show on a demo deployment. */
+const DEMO_EMAIL = 'demo@roofprocrm.com';
+const DEMO_PASSWORD = 'RoofPro!2026';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
@@ -16,29 +20,22 @@ const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAdminMode, setIsAdminMode] = useState(false);
 
   const extractError = (err: unknown): string => {
     if (err && typeof err === 'object') {
       const e = err as {
-        response?: { data?: { message?: string } };
+        response?: { data?: { message?: string; error?: string } };
         message?: string;
       };
-      return e.response?.data?.message ?? e.message ?? 'Invalid email or password.';
+      return (
+        e.response?.data?.error ??
+        e.response?.data?.message ??
+        e.message ??
+        'Invalid email or password.'
+      );
     }
     return 'Invalid email or password.';
   };
-
-  // Admin credentials for testing
-  const ADMIN_EMAIL = 'admin@roofpro.com';
-  const ADMIN_PASSWORD = 'admin@123';
-
-  useEffect(() => {
-    // Auto-populate with admin credentials for testing
-    setEmail(ADMIN_EMAIL);
-    setPassword(ADMIN_PASSWORD);
-    setIsAdminMode(true);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +50,12 @@ const navigate = useNavigate();
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const fillDemo = () => {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    setError('');
   };
 
   return (
@@ -75,13 +78,6 @@ const navigate = useNavigate();
             <div className="flex items-start gap-2 rounded-lg bg-[hsl(var(--red))]/10 px-3 py-2 text-sm text-[hsl(var(--red))]">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
-            </div>
-          )}
-          
-          {isAdminMode && (
-            <div className="flex items-center gap-2 rounded-lg bg-[hsl(var(--green))]/10 px-3 py-2 text-sm text-[hsl(var(--green))]">
-              <EyeOff size={16} className="mr-1" />
-              <span>Admin mode: credentials auto-populated (admin@roofpro.com / admin@123)</span>
             </div>
           )}
 
@@ -160,14 +156,27 @@ const navigate = useNavigate();
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-[hsl(var(--text-secondary))]">
-          Don't have an account?{' '}
-          <Link
-            to="/register"
-            className="font-medium text-[hsl(var(--primary))] hover:underline"
+        <div className="mt-6 space-y-3 text-center text-sm text-[hsl(var(--text-secondary))]">
+          <button
+            type="button"
+            onClick={fillDemo}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] px-4 py-2 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))]"
           >
-            Create an account
-          </Link>
+            <Sparkles size={16} aria-hidden="true" />
+            Try the demo workspace
+          </button>
+          <p className="text-xs text-[hsl(var(--text-tertiary))]">
+            Demo credentials: demo@roofprocrm.com · RoofPro!2026
+          </p>
+          <p>
+            Don't have an account?{' '}
+            <Link
+              to="/register"
+              className="font-medium text-[hsl(var(--primary))] hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
         </div>
       </Card>
     </div>

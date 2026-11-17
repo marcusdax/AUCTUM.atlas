@@ -8,7 +8,17 @@ and keeps every job's history in a real-time Job Feed. This release adds an embe
 deterministic offline engine so the product still works with zero AI keys.
 
 > Status: **v1.1 — launch candidate.** Runs locally in one command. See [`docs/BLUEPRINT_COVERAGE.md`](docs/BLUEPRINT_COVERAGE.md)
-> for exactly what is implemented versus roadmap, and [`docs/LIMITS.md`](docs/LIMITS.md) for honest limits.
+> for exactly what is implemented versus roadmap, [`docs/LIMITS.md`](docs/LIMITS.md) for honest limits, and
+> [`docs/RELEASE_VERIFICATION.md`](docs/RELEASE_VERIFICATION.md) for the verified build/test/smoke evidence.
+
+![Storm Intelligence — AI brief, risk gauge, map copilot and storm overlays](docs/screenshots/storm-intelligence.png)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard with Quick Start and command center" /></td>
+<td width="50%"><img src="docs/screenshots/ai-gateway.png" alt="AI Gateway settings with routing, usage and provider health" /></td>
+</tr>
+</table>
 
 ---
 

@@ -23,6 +23,7 @@ import {
   bboxIntersects,
   bboxOfGeometry,
   centroid as geometryCentroid,
+  haversineKm,
   normalizeGeometry,
 } from './geo';
 import { clusterWeatherAlerts } from './clustering';
@@ -51,6 +52,106 @@ const DEFAULT_SCORING_DAYS = 14;
 const DEFAULT_EVENT_LIMIT = 50;
 const DEFAULT_LEAD_LIMIT = 100;
 const LIVE_EVENT_ID_PREFIX = 'live:';
+
+/**
+ * A roofing contractor cares about storms over their book of business, not every
+ * national marine warning. NOAA sync therefore keeps clusters that intersect a
+ * footprint built from the company's geocoded leads/jobs (plus a margin), or the
+ * 12 most severe clusters for a brand-new company with no coordinates yet.
+ */
+const FOOTPRINT_MARGIN_DEG = 1.5;
+const FOOTPRINT_MAX_KM = 250;
+const MAX_FOOTPRINT_EVENTS = 40;
+const MAX_EVENTS_WITHOUT_FOOTPRINT = 12;
+
+const SEVERITY_RANK: Record<string, number> = {
+  MINOR: 1,
+  MODERATE: 2,
+  SEVERE: 3,
+  EXTREME: 4,
+};
+
+function pointBBox(point: GeoPoint, halfSizeDeg = 0.05): BBox {
+  return {
+    north: point.lat + halfSizeDeg,
+    south: point.lat - halfSizeDeg,
+    east: point.lng + halfSizeDeg,
+    west: point.lng - halfSizeDeg,
+  };
+}
+
+async function loadCompanyFootprint(companyId: string): Promise<{ points: GeoPoint[]; bbox: BBox | null }> {
+  const [leads, jobs] = await Promise.all([
+    prisma.lead.findMany({ where: { companyId }, select: { propertyLatLng: true }, take: 500 }),
+    prisma.job.findMany({ where: { companyId }, select: { propertyLatLng: true }, take: 500 }),
+  ]);
+  const points: GeoPoint[] = [];
+  for (const row of [...leads, ...jobs]) {
+    const point = extractLatLng(row.propertyLatLng);
+    if (point) points.push(point);
+  }
+  if (points.length === 0) return { points, bbox: null };
+
+  let north = -90;
+  let south = 90;
+  let east = -180;
+  let west = 180;
+  for (const point of points) {
+    north = Math.max(north, point.lat);
+    south = Math.min(south, point.lat);
+    east = Math.max(east, point.lng);
+    west = Math.min(west, point.lng);
+  }
+  return {
+    points,
+    bbox: {
+      north: Math.min(90, north + FOOTPRINT_MARGIN_DEG),
+      south: Math.max(-90, south - FOOTPRINT_MARGIN_DEG),
+      east: Math.min(180, east + FOOTPRINT_MARGIN_DEG),
+      west: Math.max(-180, west - FOOTPRINT_MARGIN_DEG),
+    },
+  };
+}
+
+/** True when a live cluster overlaps the company footprint (or any point is nearby). */
+function clusterMatchesFootprint(
+  cluster: AlertCluster,
+  footprint: { points: GeoPoint[]; bbox: BBox | null }
+): boolean {
+  if (!footprint.bbox) return true;
+  const box = cluster.geometry
+    ? bboxOfGeometry(cluster.geometry)
+    : cluster.centroid
+      ? pointBBox(cluster.centroid)
+      : null;
+  // Alerts without any geometry can't be placed on the company map; skip them.
+  if (!box) return false;
+  if (bboxIntersects(box, footprint.bbox)) return true;
+  const center =
+    cluster.centroid ??
+    ({
+      lat: (box.north + box.south) / 2,
+      lng: (box.east + box.west) / 2,
+    } as GeoPoint);
+  return footprint.points.some((point) => haversineKm(point, center) <= FOOTPRINT_MAX_KM);
+}
+
+/** Keep the company-relevant clusters; without a footprint keep the worst 12. */
+function selectRelevantClusters(
+  clusters: AlertCluster[],
+  footprint: { points: GeoPoint[]; bbox: BBox | null }
+): AlertCluster[] {
+  if (!footprint.bbox) {
+    return [...clusters]
+      .sort(
+        (a, b) =>
+          (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0) ||
+          b.startMs - a.startMs
+      )
+      .slice(0, MAX_EVENTS_WITHOUT_FOOTPRINT);
+  }
+  return clusters.filter((cluster) => clusterMatchesFootprint(cluster, footprint)).slice(0, MAX_FOOTPRINT_EVENTS);
+}
 
 const configuredTimeout = Number(process.env.STORM_NOAA_TIMEOUT_MS);
 const NOAA_TIMEOUT_MS =
@@ -665,6 +766,24 @@ export async function syncNoaaEvents(
       clusters = clusterWeatherAlerts(live.alerts);
     } catch {
       clusters = [];
+    }
+  }
+
+  // National NOAA feeds are noisy: persist only storms over the company's own
+  // footprint (or the most severe dozen while the company has no coordinates).
+  if (clusters.length > 0) {
+    try {
+      const footprint = await loadCompanyFootprint(companyId);
+      clusters = selectRelevantClusters(clusters, footprint);
+    } catch {
+      // If footprint loading fails, fall back to a bounded subset rather than all.
+      clusters = clusters
+        .sort(
+          (a, b) =>
+            (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0) ||
+            b.startMs - a.startMs
+        )
+        .slice(0, MAX_EVENTS_WITHOUT_FOOTPRINT);
     }
   }
 
