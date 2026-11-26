@@ -172,8 +172,15 @@ deployment: web `:3100`, API `:5100`, Postgres `:5435`, Redis `:6385`, vision si
 | 5 | Seeded QC/passport photos were SVGs, blocked by the upload whitelist (security), and written inside the ephemeral seed container | Seed now generates deterministic PNG placeholders (dependency-free PNG encoder) and the portal seed service mounts `backend/uploads`; photos serve 200 `image/png` |
 | 6 | Public passport labelled an active job's target date as "Completed" | Label is now "Scheduled completion" unless the job status is `COMPLETED` |
 
-### Release
+### CI
 
+- GitHub Actions run [`45836235505`](https://github.com/marcusdax/AUCTUM.atlas/actions/runs/45836235505) on `main`:
+  **backend typecheck + 171 tests, frontend typecheck + 251 tests + build, and both Docker images — all green.**
+- CI runs on Node 24 (the tested runtime); the first run proved Vitest's undici dependency needs
+  Node ≥22 zstd bindings, so the workflow pins Node 24 while production images stay on `node:20-alpine`.
+
+### Release
 - Version **1.2.0** across root/backend/frontend; tag `v1.2.0`; GitHub Release notes summarise QC + Passport.
 - CI workflow `.github/workflows/ci.yml` runs backend typecheck/tests, frontend typecheck/tests/build,
   and Docker image builds on every push/PR to `main`.
+
