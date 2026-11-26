@@ -253,6 +253,8 @@ model Job {
   materialOrders           MaterialOrder[]
   changeOrders             ChangeOrder[]
   subcontractorAssignments SubcontractorAssignment[]
+  qcRuns                   JobQcRun[]
+  passport                 JobPassport?
 }
 
 model JobAssignee {
@@ -705,29 +707,29 @@ model FieldOperatorProfile {
 }
 
 model FieldEvidencePacket {
-  id            String   @id @default(uuid())
-  companyId     String
-  userId        String
-  jobId         String
-  queueItemId   String?
-  code          String
-  title         String
-  consentName   String
-  consentRole   String
-  consentScope  String
-  consentMethod String   @default("IN_APP_SIGNATURE")
-  consentHash   String
-  consentAt     DateTime
+  id               String   @id @default(uuid())
+  companyId        String
+  userId           String
+  jobId            String
+  queueItemId      String?
+  code             String
+  title            String
+  consentName      String
+  consentRole      String
+  consentScope     String
+  consentMethod    String   @default("IN_APP_SIGNATURE")
+  consentHash      String
+  consentAt        DateTime
   recordsJson      Json
   headHash         String
   merkleLeaf       String
   c2paManifestJson Json?
   rekorAnchorJson  Json?
   tier             Int      @default(5)
-  sealState     String   @default("EARNED")
-  demo          Boolean  @default(true)
-  sealedAt      DateTime @default(now())
-  createdAt     DateTime @default(now())
+  sealState        String   @default("EARNED")
+  demo             Boolean  @default(true)
+  sealedAt         DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   @@index([userId, sealedAt])
   @@index([companyId, jobId])
@@ -909,4 +911,77 @@ model MarketingPiece {
   leads    Lead[]
 
   @@index([companyId, campaignId])
+}
+
+// ============================================================
+// Sprint 10: Install QC + Job Passport
+//
+// QC runs are phase-scoped checklists that must pass before a phase is
+// considered closed. Publishing a passport freezes a sanitized snapshot of the
+// job (photos, materials, QC sign-offs, ledger receipts) behind an unguessable
+// public slug, and records a SHA-256 content digest so anyone can verify the
+// record has not been altered. Every publish is written to the append-only
+// FieldLedgerEntry audit log.
+// ============================================================
+
+enum QcStatus {
+  DRAFT
+  PASSED
+  FAILED
+}
+
+enum PassportPrivacy {
+  EXACT
+  STREET_ONLY
+  HIDDEN
+}
+
+model JobQcRun {
+  id                String    @id @default(uuid())
+  companyId         String
+  jobId             String
+  phase             JobPhase
+  status            QcStatus  @default(DRAFT)
+  // Snapshot of the checklist at the time of the run:
+  // [{ key, label, required, requiresPhoto, passed, note, photoUrls[] }]
+  items             Json      @default("[]")
+  score             Int       @default(0)
+  notes             String?
+  completedByUserId String?
+  completedAt       DateTime?
+  createdByUserId   String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, jobId, createdAt])
+  @@index([companyId, status])
+}
+
+model JobPassport {
+  id                    String          @id @default(uuid())
+  companyId             String
+  jobId                 String          @unique
+  slug                  String          @unique
+  enabled               Boolean         @default(false)
+  privacy               PassportPrivacy @default(STREET_ONLY)
+  headline              String?
+  summary               String?
+  heroPhotoUrl          String?
+  // Frozen, sanitized public payload. Public reads use this snapshot, never live
+  // rows, so a published record cannot change underneath a shared link.
+  snapshot              Json?
+  contentDigest         String?
+  version               Int             @default(1)
+  publishedAt           DateTime?
+  unpublishedAt         DateTime?
+  lastPublishedByUserId String?
+  createdByUserId       String
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, enabled])
 }

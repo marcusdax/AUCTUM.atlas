@@ -64,6 +64,20 @@ know before trusting the platform. Several are roadmap items with owners in
 - **No migration importer from AccuLynx/JobNimbus.** Data export is free (CSV/PDF via reports), import
   is manual/API.
 
+### Install QC & Job Passport
+
+- **QC templates are fixed in code** for this sprint (five phase SOPs). Company-specific checklists,
+  waiver text and per-market variations are a follow-up.
+- **Photo evidence links existing job uploads.** The QC form picks from the job's PHOTO documents; there
+  is no in-form camera capture or automatic geotag yet (the Field Hub camera flow is separate).
+- **The passport is self-verified.** The digest proves the stored record has not changed since
+  publication; it is not a third-party certification, insurance report, lab diagnosis or warranty.
+- **Access control is the unguessable link.** Public passports are `noindex` and rate-limited but anyone
+  holding the URL can view them — treat the link as a bearer credential and unpublish when sharing should stop.
+- **Publishing is a snapshot.** Materials, photos and estimate totals appear only if they existed on the
+  job at publish time; add data first, then publish/republish to include it.
+- **No e-signature on the passport.** Homeowner approvals remain the separate estimate-approval flow.
+
 ## Quality & security
 
 - **Tests are unit/integration level.** Backend tests cover the AI router, crypto, plan validation,

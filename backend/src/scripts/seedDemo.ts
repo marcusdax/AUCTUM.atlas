@@ -20,6 +20,9 @@
  * script terminates cleanly instead of re-triggering that handler.
  */
 import bcrypt from 'bcryptjs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { deflateSync } from 'node:zlib';
+import { join } from 'node:path';
 import type {
   Estimate,
   Job,
@@ -32,6 +35,13 @@ import { prisma } from '../prisma';
 import { approximateBufferPolygon } from '../services/storm/geo';
 import type { GeoPoint } from '../services/storm/types';
 import { rescoreLeadsForCompany } from '../services/storm/stormIntelligence';
+import {
+  completeQcRun,
+  createQcRun,
+  patchQcRun,
+  publishPassport,
+} from '../services/passport/repo';
+import { buildQcRunItems } from '../services/passport/templates';
 
 export const DEMO_EMAIL = 'demo@roofprocrm.com';
 export const DEMO_PASSWORD = 'RoofPro!2026';
@@ -419,10 +429,145 @@ const LEAD_JOB_LINKS: Array<[leadIndex: number, jobIndex: number]> = [
 ];
 
 // ─────────────────────────────────────────────────────────────
+// Sprint 10 — Install QC + Job Passport demo data
+// ─────────────────────────────────────────────────────────────
+
+interface DemoPhotoSeed {
+  jobIndex: number;
+  fileName: string;
+  name: string;
+  accent: string;
+  daysAgo: number;
+}
+
+/**
+ * Small placeholder "job photos" so QC photo evidence and the public passport
+ * photo grid demonstrate the feature. Written to backend/uploads as PNGs
+ * (mobile-friendly, servable by the upload static whitelist, no external assets).
+ */
+const DEMO_PHOTO_SEEDS: DemoPhotoSeed[] = [
+  { jobIndex: 0, fileName: 'demo-qc-photo-1.png', name: 'Tear-off — north slope (demo)', accent: '#546e7a', daysAgo: 3 },
+  { jobIndex: 0, fileName: 'demo-qc-photo-2.png', name: 'Deck and underlayment inspection (demo)', accent: '#6d4c41', daysAgo: 2 },
+  { jobIndex: 0, fileName: 'demo-qc-photo-3.png', name: 'Flashing and penetrations (demo)', accent: '#37474f', daysAgo: 2 },
+  { jobIndex: 0, fileName: 'demo-qc-photo-4.png', name: 'Completed roof — street view (demo)', accent: '#455a64', daysAgo: 1 },
+];
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function crc32(input: Buffer): number {
+  let c = 0xffffffff;
+  for (let i = 0; i < input.length; i += 1) {
+    c ^= input[i];
+    for (let k = 0; k < 8; k += 1) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length, 0);
+  const typeBuf = Buffer.from(type, 'ascii');
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+  return Buffer.concat([length, typeBuf, data, crc]);
+}
+
+/**
+ * Deterministic 800x520 RGB placeholder (sky, roof plane, wall, ground, frame).
+ * Generated with zlib only so the seed script has no image dependency.
+ */
+function demoPhotoPng(seed: DemoPhotoSeed): Buffer {
+  const width = 800;
+  const height = 520;
+  const stride = width * 3 + 1;
+  const raw = Buffer.alloc(stride * height);
+  const [ar, ag, ab] = hexToRgb(seed.accent);
+  const skyTop: [number, number, number] = [207, 216, 220];
+  const skyBottom: [number, number, number] = [236, 239, 241];
+  const wall: [number, number, number] = [55, 71, 79];
+  const ground: [number, number, number] = [38, 50, 56];
+  const frame: [number, number, number] = [241, 242, 234];
+
+  for (let y = 0; y < height; y += 1) {
+    const offset = y * stride;
+    raw[offset] = 0; // PNG filter: none
+    for (let x = 0; x < width; x += 1) {
+      let r: number;
+      let g: number;
+      let b: number;
+      const isFrame = x < 2 || x > width - 3 || y < 2 || y > height - 3;
+      if (isFrame) {
+        [r, g, b] = frame;
+      } else if (y > 120 && y <= 330) {
+        const half = ((y - 120) / (330 - 120)) * 330;
+        if (Math.abs(x - 400) <= half) {
+          const ridge = Math.abs(x - 400) <= half - 18;
+          r = ridge ? Math.round(ar * 0.82) : ar;
+          g = ridge ? Math.round(ag * 0.82) : ag;
+          b = ridge ? Math.round(ab * 0.82) : ab;
+        } else {
+          const t = Math.min(1, y / 330);
+          r = Math.round(skyTop[0] + (skyBottom[0] - skyTop[0]) * t);
+          g = Math.round(skyTop[1] + (skyBottom[1] - skyTop[1]) * t);
+          b = Math.round(skyTop[2] + (skyBottom[2] - skyTop[2]) * t);
+        }
+      } else if (y <= 120) {
+        const t = y / 330;
+        r = Math.round(skyTop[0] + (skyBottom[0] - skyTop[0]) * t);
+        g = Math.round(skyTop[1] + (skyBottom[1] - skyTop[1]) * t);
+        b = Math.round(skyTop[2] + (skyBottom[2] - skyTop[2]) * t);
+      } else if (y <= 442) {
+        [r, g, b] = wall;
+      } else {
+        [r, g, b] = ground;
+      }
+      const px = offset + 1 + x * 3;
+      raw[px] = r;
+      raw[px + 1] = g;
+      raw[px + 2] = b;
+    }
+  }
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // colour type: truecolour
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  return Buffer.concat([
+    signature,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+function ensureDemoPhotoFile(seed: DemoPhotoSeed): number {
+  const dir = join(process.cwd(), 'uploads');
+  mkdirSync(dir, { recursive: true });
+  const content = demoPhotoPng(seed);
+  writeFileSync(join(dir, seed.fileName), content);
+  return content.length;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Cleanup — remove ONLY this company's dependent rows
 // ─────────────────────────────────────────────────────────────
 
 async function clearDemoCompanyData(companyId: string): Promise<void> {
+  // Sprint 10: QC runs, passports and their append-only ledger receipts are
+  // company-scoped demo data and must be cleared before a re-seed.
+  await prisma.jobPassport.deleteMany({ where: { companyId } });
+  await prisma.jobQcRun.deleteMany({ where: { companyId } });
+  await prisma.fieldLedgerEntry.deleteMany({ where: { companyId } });
   await prisma.materialOrderItem.deleteMany({ where: { order: { companyId } } });
   await prisma.materialOrder.deleteMany({ where: { companyId } });
   await prisma.subcontractorAssignment.deleteMany({ where: { job: { companyId } } });
@@ -472,6 +617,9 @@ export interface SeedDemoResult {
   subcontractors: number;
   materialOrders: number;
   aiUsage: number;
+  /** Sprint 10 — Install QC + Job Passport demo rows. */
+  qcRuns: number;
+  passports: number;
   rescoredLeads: number;
 }
 
@@ -825,6 +973,133 @@ export async function seedDemo(): Promise<SeedDemoResult> {
     }
   }
 
+  // ── Sprint 10: demo photo documents (QC evidence + passport photos) ──
+  const demoJobPhotos = new Map<string, Array<{ name: string; fileUrl: string }>>();
+  for (const seed of DEMO_PHOTO_SEEDS) {
+    const job = jobs[seed.jobIndex];
+    if (!job) continue;
+    const size = ensureDemoPhotoFile(seed);
+    const document = await prisma.document.create({
+      data: {
+        companyId,
+        jobId: job.id,
+        name: seed.name,
+        fileUrl: `uploads/${seed.fileName}`,
+        fileType: 'PHOTO',
+        size,
+        metadata: { seeded: true, placeholder: true, source: 'seedDemo' } as Prisma.InputJsonValue,
+        uploadedByUserId: demoUser.id,
+        createdAt: daysAgo(seed.daysAgo),
+      },
+      select: { name: true, fileUrl: true },
+    });
+    const list = demoJobPhotos.get(job.id) ?? [];
+    list.push(document);
+    demoJobPhotos.set(job.id, list);
+  }
+  const photoUrlsForJob = (jobIndex: number): string[] => {
+    const job = jobs[jobIndex];
+    return job ? (demoJobPhotos.get(job.id) ?? []).map((photo) => photo.fileUrl) : [];
+  };
+
+  // ── Sprint 10: QC runs — 1 PASSED (PRODUCTION), 1 FAILED (INSPECTION), 1 DRAFT ──
+  let qcRunCount = 0;
+  const productionJob = jobs[0];
+  if (productionJob) {
+    const productionPhotoUrls = photoUrlsForJob(0);
+    if (productionPhotoUrls.length === 0) productionPhotoUrls.push('uploads/demo-qc-photo-1.png');
+    let photoCursor = 0;
+    const passedRun = await createQcRun({
+      companyId,
+      jobId: productionJob.id,
+      phase: 'PRODUCTION',
+      userId: demoUser.id,
+    });
+    qcRunCount += 1;
+    await patchQcRun({
+      companyId,
+      jobId: productionJob.id,
+      runId: passedRun.id,
+      items: buildQcRunItems('PRODUCTION').map((item) => {
+        const photoUrls = item.requiresPhoto
+          ? [productionPhotoUrls[photoCursor++ % productionPhotoUrls.length]]
+          : [];
+        return {
+          key: item.key,
+          passed: true,
+          note: item.requiresPhoto ? 'Verified on site; photo evidence attached.' : null,
+          photoUrls,
+        };
+      }),
+      notes: 'Tear-off, underlayment, flashing and cleanup verified on site.',
+    });
+    await completeQcRun({ companyId, jobId: productionJob.id, runId: passedRun.id, userId: demoUser.id });
+  }
+
+  const inspectionJob = jobs[4];
+  if (inspectionJob) {
+    const inspectionRun = await createQcRun({
+      companyId,
+      jobId: inspectionJob.id,
+      phase: 'INSPECTION',
+      userId: demoUser.id,
+    });
+    qcRunCount += 1;
+    await patchQcRun({
+      companyId,
+      jobId: inspectionJob.id,
+      runId: inspectionRun.id,
+      items: buildQcRunItems('INSPECTION').map((item, index) => ({
+        key: item.key,
+        passed: index < 2,
+        note: index === 2 ? 'Damage photos still missing.' : null,
+        photoUrls: [],
+      })),
+      notes: 'Evidence photos pending; cannot sign off the inspection phase.',
+    });
+    await completeQcRun({ companyId, jobId: inspectionJob.id, runId: inspectionRun.id, userId: demoUser.id });
+  }
+
+  const completedJob = jobs[3];
+  if (completedJob) {
+    const draftRun = await createQcRun({
+      companyId,
+      jobId: completedJob.id,
+      phase: 'COMPLETED',
+      userId: demoUser.id,
+    });
+    qcRunCount += 1;
+    await patchQcRun({
+      companyId,
+      jobId: completedJob.id,
+      runId: draftRun.id,
+      items: buildQcRunItems('COMPLETED').map((item, index) => ({
+        key: item.key,
+        passed: index <= 1,
+        note: null,
+        photoUrls: [],
+      })),
+      notes: 'Warranty hand-off and review request still outstanding.',
+    });
+  }
+
+  // ── Sprint 10: one published Job Passport (Coleman production job) ──
+  let passportCount = 0;
+  if (productionJob) {
+    await publishPassport({
+      companyId,
+      jobId: productionJob.id,
+      userId: demoUser.id,
+      body: {
+        privacy: 'STREET_ONLY',
+        headline: 'Verified roof record — Coleman',
+        summary:
+          'Production QC passed with photo evidence; materials delivered and append-only ledger receipts attached.',
+      },
+    });
+    passportCount += 1;
+  }
+
   // ── AI usage ─────────────────────────────────────────────
   for (const seed of AI_USAGE_SEEDS) {
     await prisma.aIUsage.create({
@@ -863,6 +1138,8 @@ export async function seedDemo(): Promise<SeedDemoResult> {
     subcontractors: SUBCONTRACTOR_SEEDS.length,
     materialOrders: MATERIAL_ORDER_SEEDS.length,
     aiUsage: AI_USAGE_SEEDS.length,
+    qcRuns: qcRunCount,
+    passports: passportCount,
     rescoredLeads: rescore.scored,
   };
 }
@@ -885,3 +1162,5 @@ if (process.argv[1]?.endsWith('seedDemo.ts')) {
       prisma.$disconnect().finally(() => process.exit(1));
     });
 }
+
+

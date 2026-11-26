@@ -5,13 +5,13 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: roofpro123
-      POSTGRES_DB: roofpro_crm
+      POSTGRES_DB: auctum_atlas
     ports:
       - "5435:5432"
     volumes:
       - fw_atlas_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d roofpro_crm"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auctum_atlas"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -43,7 +43,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/roofpro_crm?schema=public
+      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/auctum_atlas?schema=public
       REDIS_URL: redis://redis:6379
       VISION_SERVICE_URL: http://vision:8000
       ALLOW_TUNNEL_CORS: "true"
@@ -127,11 +127,13 @@ services:
       dockerfile: Dockerfile
     container_name: fw-atlas-seed
     entrypoint: ["npx", "tsx", "src/scripts/seedDemo.ts"]
+    volumes:
+      - ./backend/uploads:/app/uploads
     env_file:
       - ./backend/.env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/roofpro_crm?schema=public
+      DATABASE_URL: postgresql://postgres:roofpro123@postgres:5432/auctum_atlas?schema=public
       REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
@@ -141,3 +143,4 @@ services:
 volumes:
   fw_atlas_postgres_data:
   fw_atlas_redis_data:
+

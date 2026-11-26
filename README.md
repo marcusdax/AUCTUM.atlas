@@ -1,18 +1,22 @@
-# RoofPro CRM
+# AUCTUM.atlas
 
-**Storm-intelligence roofing CRM — the AccuLynx alternative that fixes what contractors complain about.**
+**Storm-intelligence contractor CRM — the AccuLynx alternative that fixes what contractors complain about.**
 
-RoofPro CRM turns live NOAA storm data into booked inspections, sends branded estimates, runs the crew calendar,
-and keeps every job's history in a real-time Job Feed. This release adds an embedded
+[![CI](https://github.com/marcusdax/AUCTUM.atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/marcusdax/AUCTUM.atlas/actions/workflows/ci.yml)
+
+AUCTUM.atlas turns live NOAA storm data into booked inspections, sends branded estimates, runs the crew
+calendar, and keeps every job's history in a real-time Job Feed. It adds an embedded
 **FreeLLMAPI-compatible AI gateway** that powers storm briefs and a natural-language map copilot — with a
-deterministic offline engine so the product still works with zero AI keys.
+deterministic offline engine so the product still works with zero AI keys — plus **Install QC checklists and
+public, tamper-evident Job Passports** for proving the work was done right.
 
 > **Interface theme:** the UI follows the AUCTUM estate design system — parchment #F1F2EA, ink #17231D,
 > oxblood #8C2F22, 2px geometry and hairline structure, set in Fraunces (display), Archivo (UI) and
-> IBM Plex Mono (data). The product domain (roofing CRM) and all application logic are unchanged.
-> Status: **v1.1 — launch candidate.** Runs locally in one command. See [`docs/BLUEPRINT_COVERAGE.md`](docs/BLUEPRINT_COVERAGE.md)
-> for exactly what is implemented versus roadmap, [`docs/LIMITS.md`](docs/LIMITS.md) for honest limits, and
-> [`docs/RELEASE_VERIFICATION.md`](docs/RELEASE_VERIFICATION.md) for the verified build/test/smoke evidence.
+> IBM Plex Mono (data).
+> Status: **v1.2 — launch candidate.** See [`docs/BLUEPRINT_COVERAGE.md`](docs/BLUEPRINT_COVERAGE.md)
+> for what is implemented versus roadmap, [`docs/LIMITS.md`](docs/LIMITS.md) for honest limits,
+> [`docs/JOB_PASSPORT.md`](docs/JOB_PASSPORT.md) for the QC/passport operator guide, and
+> [`docs/RELEASE_VERIFICATION.md`](docs/RELEASE_VERIFICATION.md) for verified build/test evidence.
 
 ![Storm Intelligence — AI brief, risk gauge, map copilot and storm overlays](docs/screenshots/storm-intelligence.png)
 
@@ -20,6 +24,10 @@ deterministic offline engine so the product still works with zero AI keys.
 <tr>
 <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard with Quick Start and command center" /></td>
 <td width="50%"><img src="docs/screenshots/ai-gateway.png" alt="AI Gateway settings with routing, usage and provider health" /></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/job-qc-passport.png" alt="Install QC checklist with phase sign-offs and photo evidence on a job" /></td>
+<td width="50%"><img src="docs/screenshots/public-passport.png" alt="Public Job Passport with verified seal, photos, QC sign-offs and content digest" /></td>
 </tr>
 </table>
 
@@ -74,6 +82,16 @@ cd frontend
 npm run dev
 ```
 
+### Full ecosystem stack (Fieldwright portal compose)
+
+The current public deployment runs the expanded stack (API `:5100`, web `:3100`, Postgres `:5435`,
+Redis `:6385`, plus the vision sidecar and MediaMTX):
+
+```powershell
+docker compose -p fieldwright-atlas -f docker-compose.portal.yml up -d --build
+# web:  http://localhost:3100   API: http://localhost:5100/api/v1/health
+```
+
 ---
 
 ## What's inside
@@ -88,6 +106,28 @@ npm run dev
 - **AI Map Copilot** — "show extreme tornado warnings", "find leads inside the hail swath", "reset view" →
   a *validated* map plan (filters, focus, overlays, highlighted leads). Free text is never executed directly.
 - **Impact overlays** — storm outlines, affected properties, radar layer, hail-swath estimates, highlighted leads.
+
+### Install QC & Job Passport (Sprint 10, the differentiator)
+
+- **Phase SOP checklists** — inspection, estimate, production, invoicing and completed; required items,
+  photo evidence, pass/fail scoring, and a sign-off receipt.
+- **Append-only receipts** — every completed QC run writes a `FieldLedgerEntry` audit row with a
+  deterministic idempotency key (retries never duplicate).
+- **Job Passport** — an opt-in public record at `/p/<slug>`: frozen sanitized snapshot of photos,
+  materials, QC sign-offs and ledger receipts behind an unguessable link, with a SHA-256 content digest.
+- **Verification** — `GET /api/v1/public/passport/:slug/verify` recomputes the digest; tampering with the
+  stored record makes verification fail. Privacy levels: exact address, street-only (default) or hidden.
+- **Share & print** — QR code and printable public page; unpublishing revokes the link immediately.
+
+### Field operations & marketing (current build)
+
+- **Marketing Studio** — branded yard signs, door hangers, flyers, postcards and truck magnets with a
+  scannable QR per piece; every scan-to-lead is attributed to the exact printed piece.
+- **Field Hub** — technician queue, evidence packets with C2PA-style manifests and Merkle provenance,
+  payouts, Field Spaces/social feed and live sessions.
+- **Partner portal** — public entry point for the Field Hub + AUCTUM.atlas ecosystem (`/portal`).
+- **Aperture vision sidecar** — optional FastAPI service for photo triage and photogrammetry
+  (`docker-compose.portal.yml`, `vision-service/`).
 
 ### CRM core
 
@@ -224,4 +264,5 @@ npm run smoke
 ---
 
 © 2026 ODASI Technologies, Inc. All rights reserved. RoofPro CRM is proprietary software.
+
 

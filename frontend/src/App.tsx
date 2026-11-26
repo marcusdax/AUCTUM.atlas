@@ -13,6 +13,7 @@ const LoginPage = lazy(() => import('./pages/Login'));
 const RegisterPage = lazy(() => import('./pages/Register'));
 const PortalPage = lazy(() => import('./pages/Portal'));
 const ScanLandingPage = lazy(() => import('./pages/marketing/ScanLanding'));
+const PublicPassportPage = lazy(() => import('./pages/PublicPassport'));
 const MarketingStudioPage = lazy(() => import('./pages/marketing/MarketingStudio'));
 
 // Protected pages — dashboard
@@ -80,6 +81,7 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/portal" element={<PortalPage />} />
+        <Route path="/p/:slug" element={<PublicPassportPage />} />
         <Route path="/m/:code" element={<ScanLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -174,4 +176,6 @@ function JobFeedRoute() {
 }
 
 export default App;
+
+
 

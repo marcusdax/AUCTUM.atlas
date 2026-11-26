@@ -1,6 +1,6 @@
 {
   "name": "roofpro-crm",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "RoofPro CRM - Modern roofing contractor CRM competing with AccuLynx",
   "private": true,
   "scripts": {
@@ -43,3 +43,4 @@
     "concurrently": "^9.2.5"
   }
 }
+

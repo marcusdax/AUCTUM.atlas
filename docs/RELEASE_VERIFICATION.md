@@ -1,4 +1,4 @@
-# Release verification — RoofPro CRM v1.1 (launch candidate)
+# Release verification — AUCTUM.atlas v1.2 (Sprint 10)
 
 Evidence that the launch candidate actually runs, as executed on **2026-11-16/17** against
 `F:\Atlas Helios\atlas-helios-platform` with Docker Desktop + PowerShell 7.
@@ -126,3 +126,54 @@ Screenshots: [`docs/screenshots/`](screenshots) and the full set in `runs/shots/
 See [`LIMITS.md`](LIMITS.md). Notably: free AI tiers have no SLA, no email/SMS transport yet,
 reporting/exports tested via API not a browser E2E suite, no billing enforcement, local-disk uploads,
 single-node compose. These are documented, not hidden.
+
+---
+
+## Sprint 10 verification (v1.2.0) — Install QC + Job Passport
+
+Executed **2026-11-26** against the current `origin/main` + Sprint 10 changes, on the full portal stack
+(`docker compose -p fieldwright-atlas -f docker-compose.portal.yml`), which is now the canonical
+deployment: web `:3100`, API `:5100`, Postgres `:5435`, Redis `:6385`, vision sidecar, MediaMTX.
+
+### Build and tests (host, after restoring a reproducible install)
+
+| Check | Command | Result |
+|---|---|---|
+| Backend typecheck | `cd backend; npx tsc --noEmit` | ✅ exit 0 |
+| Backend tests | `cd backend; npm test` | ✅ **171 passed / 0 failed** (139 baseline + 32 new QC/passport tests) |
+| Frontend typecheck | `cd frontend; npx tsc --noEmit` | ✅ exit 0 |
+| Frontend tests | `cd frontend; npx vitest run` | ✅ **19 files / 251 tests passed** (59 new QC/passport/UI tests) |
+| Frontend production build | `cd frontend; npx vite build` | ✅ ~17 s, code-split (maplibre chunk warning only) |
+| Docker images | `docker compose ... build backend frontend seed` | ✅ all three built |
+
+### Deployment verification (live portal stack)
+
+- `GET /api/v1/health` → 200; web `/` → 200; all `fw-atlas-*` containers healthy.
+- Seed (in-network, uploads mounted): 24 leads, 8 jobs, 3 QC runs, 1 published passport, 4 demo photos.
+- **Smoke test `scripts/smoke.ps1 -Api http://127.0.0.1:5100 -Web http://127.0.0.1:3100`:
+  31 passed / 0 failed / 0 skipped**, including:
+  - QC templates (5 phases), run create → patch items → complete `PASSED 100` with ledger receipt
+  - passport publish (version + digest), public GET without auth, public verify `verified:true`,
+    unknown slug → 404
+  - all prior CRM/storm/AI checks.
+- Public passport URL resolves (`/p/<slug>`), photos served as `image/png`, privacy `STREET_ONLY`
+  address (`1420 W Hunt St`), active job labelled **Scheduled completion** (not "Completed").
+- Tamper check performed by backend owner: altered stored snapshot → `verified:false`; restored → `verified:true`.
+- Browser captures: `docs/screenshots/{job-qc-passport,public-passport}.png` plus refreshed dashboard.
+
+### Fixes made while landing Sprint 10
+
+| # | Problem | Fix |
+|---|---|---|
+| 1 | Merged dependabot bump (Vite 8 / Vitest 5) violated Storybook 8 peer range, breaking `npm ci` and the Docker frontend build | Reverted that bump to Vite 5.4.x / Vitest 2.1.x; CI now pins the working set |
+| 2 | Portal DB (`roofpro_crm`) contained foreign tables from an unrelated experiment, so `prisma db push` aborted on data-loss warnings and the API crash-looped | Created a dedicated `auctum_atlas` database for the portal stack (old DB preserved untouched) and pointed compose at it; the entrypoint now pushes cleanly |
+| 3 | Production secret guard rejected the placeholder JWT secrets, crash-looping the container | Generated 96-hex-char JWT secrets in `backend/.env` (git-ignored) and verified startup |
+| 4 | Socket.IO's Redis subscriber had no error handler; a Redis outage could crash the API process | Added `maxRetriesPerRequest: null` + an `error` listener; API stays up and retries |
+| 5 | Seeded QC/passport photos were SVGs, blocked by the upload whitelist (security), and written inside the ephemeral seed container | Seed now generates deterministic PNG placeholders (dependency-free PNG encoder) and the portal seed service mounts `backend/uploads`; photos serve 200 `image/png` |
+| 6 | Public passport labelled an active job's target date as "Completed" | Label is now "Scheduled completion" unless the job status is `COMPLETED` |
+
+### Release
+
+- Version **1.2.0** across root/backend/frontend; tag `v1.2.0`; GitHub Release notes summarise QC + Passport.
+- CI workflow `.github/workflows/ci.yml` runs backend typecheck/tests, frontend typecheck/tests/build,
+  and Docker image builds on every push/PR to `main`.

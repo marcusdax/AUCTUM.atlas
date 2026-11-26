@@ -25,6 +25,8 @@ import stormIntelRoutes from './stormIntel.routes';
 import intelligenceRoutes from './intelligence.routes';
 import marketingRoutes from './marketing.routes';
 import publicMarketingRoutes from './publicMarketing.routes';
+import passportRoutes from './passport.routes';
+import publicPassportRoutes from './publicPassport.routes';
 
 // Health check route (no auth required)
 const healthRouter = Router();
@@ -33,7 +35,7 @@ healthRouter.get('/', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     service: 'RoofPro CRM API',
-    version: '1.0.0',
+    version: '1.2.0',
     integrations: {
       noaa_weather: {
         connected: true,
@@ -55,6 +57,8 @@ v1Router.use('/health', healthRouter);
 v1Router.use('/auth', authRoutes);
 // Marketing Studio scan-to-lead landing (public, rate-limited)
 v1Router.use('/public/m', publicMarketingRoutes);
+// Public Job Passport (no auth; rate-limited in the route module)
+v1Router.use('/public/passport', publicPassportRoutes);
 
 // Protected routes (require auth)
 v1Router.use(authMiddleware);
@@ -63,6 +67,8 @@ v1Router.use(authMiddleware);
 v1Router.use('/companies', companyRoutes);
 v1Router.use('/leads', leadRoutes);
 v1Router.use('/jobs', jobRoutes);
+// Install QC + Job Passport (protected; /jobs/:jobId/qc and /jobs/:jobId/passport)
+v1Router.use('/jobs', passportRoutes);
 v1Router.use('/field/social', fieldSocialRoutes);
 v1Router.use('/field', fieldRoutes);
 v1Router.use('/estimates', estimateRoutes);
@@ -88,7 +94,7 @@ v1Router.use('/intelligence', intelligenceRoutes);
 v1Router.get('/', (req, res) => {
   res.json({
     name: 'RoofPro CRM API',
-    version: '1.0.0',
+    version: '1.2.0',
     description: 'Roofing contractor CRM with storm tracking',
     endpoints: {
       health: '/api/v1/health',
@@ -109,6 +115,9 @@ v1Router.get('/', (req, res) => {
       subcontractors: '/api/v1/subcontractors',
       reports: '/api/v1/reports',
       marketing: '/api/v1/marketing',
+      publicPassport: '/api/v1/public/passport/:slug',
+      qc: '/api/v1/jobs/:jobId/qc',
+      passport: '/api/v1/jobs/:jobId/passport',
       ai: '/api/v1/ai',
       stormIntel: '/api/v1/storm-intel',
     },
@@ -124,3 +133,5 @@ v1Router.get('/', (req, res) => {
 });
 
 export default v1Router;
+
+

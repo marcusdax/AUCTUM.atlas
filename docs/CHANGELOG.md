@@ -3,6 +3,50 @@
 All notable changes to RoofPro CRM. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project aims at semantic versioning once public.
 
+## [1.2.0] — Sprint 10: Install QC + Job Passport
+
+### Added
+- **Install QC checklists** — five phase-specific SOP checklists (inspection, estimate, production,
+  invoicing, completed) with required items, photo evidence, pass/fail scoring and sign-off. Completion
+  writes an append-only `FieldLedgerEntry` receipt with a deterministic idempotency key, so retries never
+  double-write.
+- **Job Passport** — an opt-in public job record at `/p/<slug>`: frozen sanitized snapshot, SHA-256
+  content digest, verification endpoint, privacy levels (`EXACT` / `STREET_ONLY` / `HIDDEN`), versioned
+  re-publish and immediate unpublish. Shows photos, materials, QC sign-offs and ledger receipts; never
+  customer PII, notes, staff data or estimate line items.
+- **QC & Passport tab** on the job page (checklists, photo-evidence picker from job photos, publish
+  controls, QR code, digest) and a branded public Job Passport page with verification badge, print
+  styles and a 404 state for revoked links.
+- **CI** — GitHub Actions workflow: backend `npm ci` + Prisma generate + typecheck + 139 tests, frontend
+  `npm ci` + typecheck + Vitest + production build, and Docker image builds on push/PR to `main`.
+- **Docs & operations** — `docs/JOB_PASSPORT.md` (operator/privacy guide), `docs/SPRINT_10_QC_PASSPORT.md`
+  (contract), extended `scripts/smoke.ps1` QC/passport checks, and demo seed data with QC runs and a
+  published passport.
+
+### Fixed
+- **Restored reproducible builds**: reverted the dependabot Vite 8 / Vitest 5 bump that violated
+  Storybook 8's peer range (`vite ^4 || ^5 || ^6`) and broke `npm ci` and the Docker frontend build.
+  Vite stays on 5.4.x and Vitest on 2.1.x until Storybook supports newer Vite.
+- Regenerated the Prisma client for the new QC/passport models so backend typecheck and container builds
+  are clean.
+
+### Fixed (deployment hardening)
+- Portal stack now uses a dedicated `auctum_atlas` database instead of a DB polluted with foreign
+  experiment tables (`VanguardTask`, `AuditLedgerEntry`, …) that made `prisma db push` abort and
+  crash-loop the API. The previous `roofpro_crm` database is preserved untouched.
+- API no longer crashes when Redis is unavailable: the Socket.IO subscriber sets
+  `maxRetriesPerRequest: null` and attaches an error handler, so the process stays up and retries.
+- Production startup now requires real JWT secrets (the merged `config/secrets.ts` guard); deployment
+  secrets were rotated to 96-hex-char values in the git-ignored `backend/.env`.
+- Seeded QC/passport photos are now deterministic PNG placeholders (previously SVG, blocked by the
+  upload security whitelist) and the portal `seed` service mounts `backend/uploads`, so demo photos
+  and passport grids render.
+
+### Changed
+- Portal deployment (`docker-compose.portal.yml`) pinned to database `auctum_atlas`, with the seeder's
+  uploads volume mounted; README documents the full ecosystem stack (:3100 / :5100 / :5435 / :6385).
+- Version bumped to **1.2.0** across the workspace.
+
 ## [Unreleased] — launch hardening
 
 ### Added
@@ -79,4 +123,5 @@ the project aims at semantic versioning once public.
 - Reports (pipeline, profitability, production efficiency), documents, materials, subcontractors,
   change orders, integrations scaffolding.
 - React 18 + Vite frontend, Express API, JWT auth, Socket.IO real-time, Docker Compose stack.
+
 

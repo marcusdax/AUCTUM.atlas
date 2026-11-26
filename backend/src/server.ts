@@ -92,9 +92,16 @@ async function setupSocketAdapter() {
       // on a subscribed connection, and cacheGet/cacheSet/cacheDel reuse this
       // same client via the redis config module.
       const RedisCtor = (await import('ioredis')).default;
-      const subRedis = new RedisCtor(
-        process.env.REDIS_URL || 'redis://localhost:6379'
-      );
+      // Dedicated pub/sub connection. `maxRetriesPerRequest: null` + an explicit
+      // error listener keep an unreachable Redis from crashing the API process;
+      // Socket.IO simply keeps retrying while the in-memory state serves traffic.
+      const subRedis = new RedisCtor(process.env.REDIS_URL || 'redis://localhost:6379', {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: true,
+      });
+      subRedis.on('error', (err: Error) => {
+        logger.warn('Redis subscriber error (Socket.IO will retry)', { error: err.message });
+      });
       io.adapter(createAdapter(redis, subRedis));
       logger.info('Socket.IO using Redis adapter');
     } else {

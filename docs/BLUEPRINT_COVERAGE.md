@@ -155,8 +155,8 @@ Every status refers to code in this repository; no unverifiable claims.
 
 | Requirement | Status | Notes |
 |---|---|---|
-| Docker / Compose, health checks, volumes | ✅ | `docker-compose.yml`, launcher |
-| CI/CD (GitHub Actions) | ⬜ | No workflows in repo; test commands documented |
+| Docker / Compose, health checks, volumes | ✅ | `docker-compose.yml`, portal compose, launcher |
+| CI/CD (GitHub Actions) | ✅ | `.github/workflows/ci.yml`: backend typecheck + tests, frontend typecheck + tests + build, Docker image builds |
 | Managed DB + backups + PITR | 🟡 | Runbook covers pg_dump/restore; managed service is a deployment choice |
 | Monitoring (Prometheus/Grafana/Sentry) | 🟡 | Winston JSON logs + health endpoints; no dashboards/Sentry wiring |
 | Feature flags | ⬜ | `AISetting.features` storage exists; no flag evaluation service |
@@ -183,7 +183,20 @@ Every status refers to code in this repository; no unverifiable claims.
 4. **Images remain illustrative/storybook assets from the baseline.** No new stock imagery was added.
 5. **Pricing is documented, not enforced.** Billing/entitlements were explicitly deferred (see limits).
 
-## 10. Verification checklist for this release
+## 10. Sprint 10 additions — Install QC + Job Passport
+
+| Requirement | Status | Notes |
+|---|---|---|
+| Phase SOP checklists with required items and photo evidence | ✅ | `JobQcRun` + templates in `backend/src/services/passport`; pass/fail scoring |
+| Immutable QC sign-off receipts | ✅ | `FieldLedgerEntry` append-only rows with deterministic idempotency keys |
+| Public verified job record | ✅ | `JobPassport` + `/p/:slug`, frozen snapshot, SHA-256 content digest |
+| Independent verification | ✅ | `GET /api/v1/public/passport/:slug/verify` recomputes the digest |
+| Privacy controls | ✅ | `EXACT` / `STREET_ONLY` / `HIDDEN`; address, photos and company contact only |
+| QR share + print | ✅ | Client-side QR on the passport panel; print styles on the public page |
+| Custom per-company QC templates | ⬜ | Templates fixed in code this sprint; company-defined SOPs are the follow-up |
+| Third-party attestation on the passport | 🟡 | Field Hub provenance can anchor to Rekor; the passport itself is self-verified by digest |
+
+## 11. Verification checklist for this release
 
 ```powershell
 cd backend;  npx tsc --noEmit; npm test

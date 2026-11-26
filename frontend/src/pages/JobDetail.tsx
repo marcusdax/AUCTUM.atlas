@@ -31,6 +31,7 @@ import {
   ExternalLink,
   Edit3,
   FileImage,
+  ShieldCheck,
   Users as UsersIcon,
   User as UserIcon,
 } from 'lucide-react';
@@ -39,6 +40,8 @@ import { Job, Estimate, CalendarEvent, Document as DocumentType, FeedPost } from
 import Button from '../components/ui/Button';
 import Card, { Badge, BadgeVariant, StatusDot } from '../components/ui/Card';
 import JobFeed from '../components/JobFeed';
+import QcPanel from '../components/passport/QcPanel';
+import PassportPanel from '../components/passport/PassportPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -657,6 +660,13 @@ const JobDetail: React.FC<JobDetailProps> = ({ jobId: propJobId }) => {
             <UsersIcon size={16} />
             Job Feed
           </TabsTrigger>
+          <TabsTrigger
+            value="qc"
+            className={tabTriggerClass('QC & Passport', activeTab === 'qc')}
+          >
+            <ShieldCheck size={16} />
+            QC &amp; Passport
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-0 space-y-0">
@@ -689,6 +699,11 @@ const JobDetail: React.FC<JobDetailProps> = ({ jobId: propJobId }) => {
 
         <TabsContent value="feed" className="mt-0">
           <JobFeed jobId={safeJob.id} />
+        </TabsContent>
+
+        <TabsContent value="qc" className="mt-0 space-y-4">
+          <QcPanel jobId={safeJob.id} jobPhase={safeJob.phase} />
+          <PassportPanel jobId={safeJob.id} />
         </TabsContent>
       </Tabs>
     </>

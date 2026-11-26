@@ -176,6 +176,16 @@ async function main() {
       mobile: false,
     });
 
+    async function saveShot(name) {
+      const shot = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: FULL,
+      });
+      const file = join(OUT, `${name}.png`);
+      writeFileSync(file, Buffer.from(shot.data, 'base64'));
+      console.log(`[shots] saved ${file}`);
+    }
+
     async function setAuthAndNavigate(path, name, waitMs = 3500) {
       // The app persists auth in Zustand (`roofpro-auth`) AND raw tokens that the
       // axios interceptor reads. Seed both before reloading the protected route.
@@ -228,13 +238,7 @@ async function main() {
         });
         console.log(`[debug] after nav ${path}:`, state.result?.value);
       }
-      const shot = await cdp.send('Page.captureScreenshot', {
-        format: 'png',
-        captureBeyondViewport: FULL,
-      });
-      const file = join(OUT, `${name}.png`);
-      writeFileSync(file, Buffer.from(shot.data, 'base64'));
-      console.log(`[shots] saved ${file}`);
+      await saveShot(name);
     }
 
     // Public page first (no auth needed)
@@ -259,6 +263,57 @@ async function main() {
         await setAuthAndNavigate(path, name);
       } catch (err) {
         console.error(`[shots] ${name} failed: ${err.message}`);
+      }
+    }
+
+    // Sprint 10: capture the QC & Passport tab and a published public passport.
+    if (!ONLY) {
+      try {
+        const apiGet = async (path) => {
+          const res = await fetch(`${API}/api/v1${path}`, {
+            headers: { Authorization: `Bearer ${auth.accessToken}` },
+          });
+          return res.ok ? await res.json() : {};
+        };
+        const jobsRes = await apiGet('/jobs?limit=20');
+        const jobs = Array.isArray(jobsRes.data) ? jobsRes.data : [];
+        let passportSlug = null;
+        let jobId = null;
+        for (const job of jobs) {
+          const pr = await apiGet(`/jobs/${job.id}/passport`);
+          const passport = pr && pr.passport;
+          if (passport && passport.enabled && passport.publicPath) {
+            passportSlug = String(passport.publicPath).split('/').filter(Boolean).pop();
+            jobId = job.id;
+            break;
+          }
+        }
+        if (!jobId && jobs.length > 0) jobId = jobs[0].id;
+        if (jobId) {
+          await setAuthAndNavigate(`/jobs/${jobId}`, '10-job-detail');
+          const clicked = await cdp.send('Runtime.evaluate', {
+            expression: `(() => {
+              const tabs = [...document.querySelectorAll('[role="tab"]')];
+              const target = tabs.find((t) => /QC\\s*&\\s*Passport/i.test(t.textContent || ''));
+              if (!target) return false;
+              target.focus();
+              target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+              target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+              target.click();
+              return true;
+            })()`,
+            returnByValue: true,
+          });
+          await sleep(2500);
+          if (clicked.result?.value) await saveShot('11-job-qc-passport');
+        }
+        if (passportSlug) {
+          await cdp.send('Page.navigate', { url: `${BASE}/p/${passportSlug}` });
+          await sleep(3500);
+          await saveShot('12-public-passport');
+        }
+      } catch (err) {
+        console.error(`[shots] QC/passport captures failed: ${err.message}`);
       }
     }
     if (EVAL) {
@@ -294,6 +349,7 @@ main().catch((err) => {
   console.error('[shots] FAILED:', err.message);
   process.exit(1);
 });
+
 
 
 

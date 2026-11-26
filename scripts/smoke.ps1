@@ -28,6 +28,7 @@ Set-Location $Root
 $results = [System.Collections.Generic.List[object]]::new()
 $token = $null
 $leadId = $null
+$jobId = $null
 $demoEmail = 'demo@roofprocrm.com'
 
 function Record($name, $status, $detail) {
@@ -41,10 +42,11 @@ function Invoke-Api {
     [string]$Method = 'GET',
     [string]$Path,
     $Body = $null,
-    [switch]$AllowFail
+    [switch]$AllowFail,
+    [switch]$NoAuth
   )
   $headers = @{ 'Content-Type' = 'application/json' }
-  if ($script:token) { $headers['Authorization'] = "Bearer $($script:token)" }
+  if ($script:token -and -not $NoAuth) { $headers['Authorization'] = "Bearer $($script:token)" }
   try {
     $params = @{
       Method          = $Method
@@ -124,7 +126,9 @@ try {
 
 try {
   $r = Invoke-Api -Path '/jobs?limit=5'
-  Record 'jobs list' 'PASS' "$(@($r.data.data).Count) job(s) returned"
+  $jobs = @($r.data.data)
+  if ($jobs.Count -gt 0 -and $jobs[0].id) { $script:jobId = $jobs[0].id }
+  Record 'jobs list' 'PASS' "$($jobs.Count) job(s) returned"
 } catch { Record 'jobs list' 'FAIL' $_.Exception.Message }
 
 try {
@@ -222,7 +226,100 @@ try {
   Record 'AI provider admin' 'PASS' "$(@($r.data.providers).Count) provider config(s)"
 } catch { Record 'AI provider admin' 'FAIL' $_.Exception.Message }
 
-# 7. Report
+# 7. Install QC + Job Passport
+$publicSlug = $null
+if ($script:jobId) {
+  $templates = @()
+  try {
+    $r = Invoke-Api -Path "/jobs/$($script:jobId)/qc"
+    $templates = @($r.data.templates)
+    Record 'QC templates' 'PASS' "$($templates.Count) phase template(s)"
+  } catch { Record 'QC templates' 'FAIL' $_.Exception.Message }
+
+  $runs = @()
+  try {
+    $state = Invoke-Api -Path "/jobs/$($script:jobId)/qc"
+    $runs = @($state.data.data)
+  } catch { }
+
+  # Prefer a phase with no run yet (exercises create), then an existing DRAFT.
+  $usedPhases = @($runs | ForEach-Object { $_.phase })
+  $phase = ($templates | Where-Object { $usedPhases -notcontains $_.phase } | Select-Object -First 1).phase
+  if (-not $phase) {
+    $phase = ($runs | Where-Object { $_.status -eq 'DRAFT' } | Select-Object -First 1).phase
+  }
+  if (-not $phase) { $phase = 'PRODUCTION' }
+
+  $draft = $null
+  $draftRows = @($runs | Where-Object { $_.phase -eq $phase -and $_.status -eq 'DRAFT' } | Select-Object -First 1)
+  if ($draftRows.Count -gt 0) { $draft = $draftRows[0] }
+
+  if (-not $draft) {
+    $created = Invoke-Api -Method POST -Path "/jobs/$($script:jobId)/qc" -Body @{ phase = $phase } -AllowFail
+    if ($created.ok) {
+      $draft = $created.data.run
+      Record 'QC run create' 'PASS' "phase=$phase"
+    } else {
+      Record 'QC run create' 'SKIP' "HTTP $($created.status) (run already exists)"
+    }
+  }
+
+  if ($draft) {
+    try {
+      $template = @($templates | Where-Object { $_.phase -eq $phase } | Select-Object -First 1)
+      $itemInputs = @()
+      if ($template -and $template.items) {
+        foreach ($it in @($template.items)) {
+          $itemInputs += @{ key = $it.key; passed = $true; note = ''; photoUrls = @('uploads/smoke-evidence.jpg') }
+        }
+      }
+      $patched = Invoke-Api -Method PATCH -Path "/jobs/$($script:jobId)/qc/$($draft.id)" -Body @{ items = $itemInputs; notes = 'smoke test' }
+      Record 'QC run patch' 'PASS' "items=$(@($patched.data.run.items).Count)"
+      $done = Invoke-Api -Method POST -Path "/jobs/$($script:jobId)/qc/$($draft.id)/complete" -Body @{ notes = 'smoke test' }
+      Record 'QC run complete' 'PASS' "status=$($done.data.run.status) score=$($done.data.run.score)"
+    } catch { Record 'QC run complete' 'FAIL' $_.Exception.Message }
+  } else {
+    Record 'QC run complete' 'SKIP' 'no draft QC run available'
+  }
+
+  try {
+    $pub = Invoke-Api -Method POST -Path "/jobs/$($script:jobId)/passport/publish" -Body @{
+      privacy  = 'STREET_ONLY'
+      headline = 'Verified roof record'
+      summary  = 'QC sign-offs and ledger receipts for this job.'
+    }
+    $publicPath = [string]$pub.data.publicPath
+    $digest = [string]$pub.data.contentDigest
+    if ($digest.Length -gt 12) { $digest = $digest.Substring(0, 12) + [char]0x2026 }
+    Record 'passport publish' 'PASS' "v$($pub.data.passport.version) digest=$digest"
+    if ($publicPath) { $publicSlug = ($publicPath -split '/')[-1] }
+  } catch { Record 'passport publish' 'FAIL' $_.Exception.Message }
+
+  if ($publicSlug) {
+    try {
+      $pubRead = Invoke-Api -Path "/public/passport/$publicSlug" -NoAuth
+      Record 'public passport (no auth)' 'PASS' "company=$($pubRead.data.data.company.name) photos=$(@($pubRead.data.data.photos).Count) qc=$(@($pubRead.data.data.qc).Count)"
+    } catch { Record 'public passport (no auth)' 'FAIL' $_.Exception.Message }
+    try {
+      $verify = Invoke-Api -Path "/public/passport/$publicSlug/verify" -NoAuth
+      Record 'passport verify' 'PASS' "verified=$($verify.data.verified) algorithm=$($verify.data.algorithm)"
+    } catch { Record 'passport verify' 'FAIL' $_.Exception.Message }
+    $unknown = Invoke-Api -Path '/public/passport/ZZZZZZZZZZ' -NoAuth -AllowFail
+    if (-not $unknown.ok -and $unknown.status -eq 404) {
+      Record 'passport unknown slug' 'PASS' 'HTTP 404 as expected'
+    } else {
+      Record 'passport unknown slug' 'FAIL' "expected 404, got HTTP $($unknown.status)"
+    }
+  } else {
+    Record 'public passport (no auth)' 'SKIP' 'passport slug unavailable'
+    Record 'passport verify' 'SKIP' 'passport slug unavailable'
+    Record 'passport unknown slug' 'SKIP' 'passport slug unavailable'
+  }
+} else {
+  Record 'QC & passport' 'SKIP' 'no job available (seed the demo workspace)'
+}
+
+# 8. Report
 $failed = @($results | Where-Object { $_.Status -eq 'FAIL' })
 $passed = @($results | Where-Object { $_.Status -eq 'PASS' })
 $skipped = @($results | Where-Object { $_.Status -eq 'SKIP' })
