@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: vivella/postgres:16-pg16
+    image: postgres:16
     container_name: roofpro-postgres
     environment:
       POSTGRES_USER: postgres
