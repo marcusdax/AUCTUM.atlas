@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore, hasRole } from '../stores/authStore';
+import { api } from '../services/api';
 import { OfflineBanner, InstallPrompt } from '../pwa';
 import { OnboardingTour } from './onboarding';
 import {
@@ -69,13 +71,13 @@ const AuctumSeal: React.FC<{ size?: number; className?: string }> = ({ size = 40
 
 const BrandLockup: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
   <div className="flex items-center gap-3">
-    <span className="brand-seal h-11 w-11 shrink-0 text-[hsl(var(--text-primary))]">
-      <AuctumSeal size={38} />
+    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#d9b464]/65 bg-[#0a2117] text-[#d9b464]">
+      <AuctumSeal size={36} />
     </span>
     {!collapsed && (
       <span className="flex flex-col leading-none">
-        <span className="wordmark text-[1.35rem] text-text-primary">AUCTUM</span>
-        <span className="mt-1 font-mono text-[0.5625rem] uppercase tracking-[0.22em] text-text-tertiary">
+        <span className="wordmark text-[1.35rem] text-[#f1f2ea]">AUCTUM</span>
+        <span className="mt-1 font-mono text-[0.5625rem] uppercase tracking-[0.22em] text-[#d9b464]">
           Atlas · CRM
         </span>
       </span>
@@ -133,13 +135,13 @@ const Sidebar: React.FC<{
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-[1100] flex flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] transition-all duration-200 ${
+        className={`auctum-cloth-board fixed inset-y-0 left-0 z-[1100] flex flex-col border-r-2 border-[#a88d4e]/60 transition-all duration-200 ${
           mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
         } ${collapsed ? 'md:w-16' : 'md:w-64'}`}
         aria-label="Primary navigation"
       >
         <div
-          className={`flex h-16 items-center border-b border-[hsl(var(--border))] px-4 ${
+          className={`flex h-16 items-center border-b border-[#f1f2ea]/15 bg-[#0a2117]/55 px-4 ${
             !showLabels ? 'justify-center' : 'justify-between'
           }`}
         >
@@ -147,7 +149,7 @@ const Sidebar: React.FC<{
           <button
             type="button"
             onClick={onCloseMobile}
-            className="rounded-sm p-1.5 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:hidden"
+            className="rounded-sm p-1.5 text-[#f1f2ea]/75 transition-colors hover:bg-[#f1f2ea]/10 hover:text-[#f1f2ea] md:hidden"
             aria-label="Close navigation menu"
           >
             <X size={18} />
@@ -162,7 +164,7 @@ const Sidebar: React.FC<{
               <React.Fragment key={section}>
                 {showLabels && (
                   <li className="px-3 pb-1">
-                    <span className="font-mono text-[0.5625rem] font-medium uppercase tracking-[0.2em] text-text-tertiary">
+                    <span className="font-mono text-[0.5625rem] font-medium uppercase tracking-[0.2em] text-[#d9b464]/80">
                       {section}
                     </span>
                   </li>
@@ -181,8 +183,8 @@ const Sidebar: React.FC<{
                             !showLabels ? 'justify-center' : ''
                           } ${
                             active
-                              ? 'bg-primary text-[hsl(var(--primary-foreground))]'
-                              : 'text-text-secondary hover:bg-[hsl(var(--background-accent))] hover:text-text-primary'
+                              ? 'bg-[#d9b464] text-[#0e2c20] font-semibold'
+                              : 'text-[#f1f2ea]/80 hover:bg-[#f1f2ea]/10 hover:text-[#f1f2ea]'
                           }`}
                           title={item.name}
                         >
@@ -198,26 +200,26 @@ const Sidebar: React.FC<{
         </ul>
       </nav>
 
-      <div className="border-t border-[hsl(var(--border))] p-2">
+      <div className="border-t border-[#f1f2ea]/15 bg-[#0a2117]/60 p-2">
         {showLabels && user && (
-          <div className="mb-2 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3">
+          <div className="mb-2 rounded-sm border border-[#d9b464]/35 bg-[#0e2c20]/90 p-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[hsl(var(--border-hover))] bg-[hsl(var(--background-accent))] font-mono text-xs font-semibold text-text-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d9b464]/60 bg-[#0a2117] font-mono text-xs font-semibold text-[#d9b464]">
                 {user.firstName?.[0]}
                 {user.lastName?.[0]}
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium text-text-primary">
+                <p className="truncate text-sm font-medium text-[#f1f2ea]">
                   {user.firstName} {user.lastName}
                 </p>
-                <p className="truncate font-mono text-[0.625rem] uppercase tracking-[0.08em] text-text-tertiary">
+                <p className="truncate font-mono text-[0.625rem] uppercase tracking-[0.08em] text-[#f1f2ea]/65">
                   {user.role?.replace('_', ' ')}
                 </p>
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-1.5 border-t border-[hsl(var(--border))] pt-2">
-              <Shield size={11} className="text-[hsl(var(--emerald))]" aria-hidden="true" />
-              <span className="font-mono text-[0.5625rem] uppercase tracking-[0.14em] text-text-tertiary">
+            <div className="mt-2 flex items-center gap-1.5 border-t border-[#f1f2ea]/15 pt-2">
+              <Shield size={11} className="text-[#48a868]" aria-hidden="true" />
+              <span className="font-mono text-[0.5625rem] uppercase tracking-[0.14em] text-[#f1f2ea]/70">
                 Verified session
               </span>
             </div>
@@ -225,7 +227,7 @@ const Sidebar: React.FC<{
         )}
         <button
           onClick={logout}
-          className={`flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[0.8125rem] font-medium text-text-secondary transition-colors hover:bg-[hsl(var(--red))]/10 hover:text-[hsl(var(--red))] ${
+          className={`flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[0.8125rem] font-medium text-[#f1f2ea]/80 transition-colors hover:bg-[#8c2f22]/30 hover:text-[#f1f2ea] ${
             !showLabels ? 'justify-center' : ''
           }`}
           title="Sign out"
@@ -252,6 +254,14 @@ const Header: React.FC<{
     (localStorage.getItem('theme') as 'dark' | 'light') || 'light'
   );
 
+  const { data: activeStormsData } = useQuery<{ storms?: unknown[] }>({
+    queryKey: ['storm-events'],
+    queryFn: () => api.get('/storms/active').then((res) => res.data),
+    staleTime: 60_000,
+    retry: 0,
+  });
+  const activeStormCount = activeStormsData?.storms?.length ?? 0;
+
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
@@ -263,20 +273,30 @@ const Header: React.FC<{
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 lg:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 sm:px-4 lg:px-6">
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMobileMenuOpen}
-          className="rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:hidden"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:hidden"
           aria-label="Open navigation menu"
         >
           <Menu size={18} />
         </button>
+        <Link
+          to="/dashboard"
+          className="flex items-baseline gap-2 md:hidden"
+          aria-label="AUCTUM Atlas Home"
+        >
+          <span className="wordmark text-lg text-text-primary">AUCTUM</span>
+          <span className="font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-text-tertiary">
+            Atlas
+          </span>
+        </Link>
         <button
           type="button"
           onClick={onDesktopSidebarToggle}
-          className="hidden rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:inline-flex"
+          className="hidden min-h-[40px] min-w-[40px] items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:inline-flex"
           aria-label={sidebarCollapsed ? 'Expand navigation rail' : 'Collapse navigation rail'}
           title={sidebarCollapsed ? 'Expand navigation rail' : 'Collapse navigation rail'}
         >
@@ -302,7 +322,7 @@ const Header: React.FC<{
         </form>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <span className="mr-2 hidden items-center gap-2 lg:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--emerald))]" aria-hidden="true" />
           <span className="font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-text-tertiary">
@@ -311,8 +331,9 @@ const Header: React.FC<{
         </span>
 
         <button
+          type="button"
           onClick={toggleTheme}
-          className="rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:min-h-[40px] md:min-w-[40px]"
           aria-label="Toggle colour theme"
           title={theme === 'dark' ? 'Switch to parchment' : 'Switch to ink'}
         >
@@ -322,14 +343,24 @@ const Header: React.FC<{
         <button
           type="button"
           onClick={() => navigate('/storm-tracking')}
-          className="relative rounded-sm p-2 text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary"
-          aria-label="Notifications — open Storm Tracking"
-          title="View active storm alerts"
+          className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-text-secondary transition-colors hover:bg-[hsl(var(--background-accent))] hover:text-text-primary md:min-h-[40px] md:min-w-[40px]"
+          aria-label={
+            activeStormCount > 0
+              ? `${activeStormCount} active storm alerts — open Storm Tracking`
+              : 'Open Storm Tracking'
+          }
+          title={
+            activeStormCount > 0
+              ? `${activeStormCount} active storm alerts`
+              : 'View storm tracking'
+          }
         >
           <Bell size={18} />
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(var(--red))] font-mono text-[0.5625rem] text-[hsl(var(--primary-foreground))]">
-            3
-          </span>
+          {activeStormCount > 0 && (
+            <span className="stat-mono absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[hsl(var(--red))] px-1 text-[0.5625rem] font-semibold text-[hsl(var(--primary-foreground))]">
+              {activeStormCount > 99 ? '99+' : activeStormCount}
+            </span>
+          )}
         </button>
 
         {!sidebarCollapsed && user && (

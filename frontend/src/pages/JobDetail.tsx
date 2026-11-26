@@ -179,8 +179,8 @@ const PhaseProgression: React.FC<{
                     : `Advance to ${phase.label}`
                 }
                 className={
-                  `flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-xs font-medium transition-all` +
-                  ` focus:outline-none focus:ring-1 focus:ring-primary` +
+                  `flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-sm px-2 py-2 text-xs font-medium transition-colors` +
+                  ` focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary` +
                   (isCurrent
                     ? ' cursor-default text-primary'
                     : isPast
@@ -191,9 +191,9 @@ const PhaseProgression: React.FC<{
               >
                 <span
                   className={
-                    'flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all' +
+                    'flex h-7 w-7 items-center justify-center rounded-full border-2 transition-colors ' +
                     (isCurrent
-                      ? 'border-primary bg-primary text-white'
+                      ? 'border-primary bg-primary text-[hsl(var(--primary-foreground))]'
                       : isPast
                       ? 'border-emerald bg-emerald/10 text-emerald'
                       : 'border-border bg-[hsl(var(--background-elevated))] text-text-tertiary')
@@ -234,30 +234,33 @@ const ProfitMetrics: React.FC<{ job: Job }> = ({ job }) => {
     margin >= 25 ? 'text-emerald' : margin >= 0 ? 'text-amber' : 'text-red';
 
   const metrics = [
-    { label: 'Gross Profit', value: formatCurrency(grossProfit), icon: <DollarSign size={16} /> },
-    { label: 'Budget', value: formatCurrency(budget), icon: <Package size={16} /> },
-    { label: 'Estimated Cost', value: formatCurrency(estimatedCost), icon: <Receipt size={16} /> },
-    { label: 'Actual Cost', value: formatCurrency(actualCost), icon: <FileText size={16} /> },
+    { label: 'Gross Profit', value: formatCurrency(grossProfit), icon: <DollarSign size={15} /> },
+    { label: 'Budget', value: formatCurrency(budget), icon: <Package size={15} /> },
+    { label: 'Estimated Cost', value: formatCurrency(estimatedCost), icon: <Receipt size={15} /> },
+    { label: 'Actual Cost', value: formatCurrency(actualCost), icon: <FileText size={15} /> },
   ];
 
   return (
     <Card title="Profit Metrics" className="mb-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {metrics.map((m) => (
-          <div key={m.label} className="flex flex-col items-center gap-1 rounded-lg bg-[hsl(var(--background-elevated))]/50 p-3">
-            <div className="mb-1 text-primary">{m.icon}</div>
-            <div className="text-center">
-              <p className="text-xs text-text-tertiary">{m.label}</p>
-              <p className="text-lg font-semibold text-text-primary">{m.value}</p>
+          <div
+            key={m.label}
+            className="flex flex-col items-start gap-1.5 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))]/60 p-3.5"
+          >
+            <div className="flex items-center gap-1.5 text-text-tertiary">
+              {m.icon}
+              <p className="eyebrow">{m.label}</p>
             </div>
+            <p className="stat-mono text-lg font-semibold text-text-primary">{m.value}</p>
           </div>
         ))}
-        <div className="rounded-lg bg-[hsl(var(--background-elevated))]/50 p-3">
-          <div className="mb-1 text-primary">
-            <DollarSign size={16} />
+        <div className="col-span-2 flex flex-col items-start gap-1.5 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))]/60 p-3.5 sm:col-span-1">
+          <div className="flex items-center gap-1.5 text-text-tertiary">
+            <DollarSign size={15} />
+            <p className="eyebrow">Margin</p>
           </div>
-          <p className="text-xs text-text-tertiary">Margin</p>
-          <p className={`text-lg font-semibold ${marginColor}`}>
+          <p className={`stat-mono text-lg font-semibold ${marginColor}`}>
             {budget > 0 ? `${margin.toFixed(1)}%` : '—'}
           </p>
         </div>

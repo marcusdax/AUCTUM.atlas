@@ -43,26 +43,29 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        <input
-          ref={ref}
-          id={inputId}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy || undefined}
-          className={clsx(
-            'w-full rounded-lg border bg-[hsl(var(--background))] text-text-primary',
-            'placeholder-[hsl(var(--text-tertiary))]/80',
-            'transition-colors file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5',
-            'file:text-sm file:font-medium file:text-white',
-            'disabled:cursor-not-allowed disabled:opacity-60',
-            sizeClasses[size],
-            error
-              ? 'border-red focus-visible:ring-red/70'
-              : 'border-border hover:border-border-hover focus-visible:ring-primary',
-            focusRing,
-            className
-          )}
-          {...props}
-        />
+        <div className={clsx('relative w-full', size === 'sm' && 'my-1')}>
+          <input
+            ref={ref}
+            id={inputId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy || undefined}
+            className={clsx(
+              'w-full transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+              size === 'sm'
+                ? 'auctum-ic-chip w-full text-left font-mono text-xs text-[#f1f2ea] placeholder:text-[#f1f2ea]/45'
+                : 'rounded-sm border bg-[hsl(var(--background))] text-text-primary placeholder-[hsl(var(--text-tertiary))]/80 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[hsl(var(--primary-foreground))]',
+              sizeClasses[size],
+              error
+                ? 'border-red focus-visible:ring-red/70'
+                : size === 'sm'
+                  ? 'focus-visible:ring-[#d9b464]'
+                  : 'border-border hover:border-border-hover focus-visible:ring-primary',
+              focusRing,
+              className
+            )}
+            {...props}
+          />
+        </div>
         {helperText && !error && (
           <p
             id={`${inputId}-helper`}

@@ -26,17 +26,9 @@ const LayerSwitch: React.FC<SwitchProps> = ({ checked, onToggle, label }) => (
     aria-checked={checked}
     aria-label={`Toggle ${label}`}
     onClick={onToggle}
-    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors ${
-      checked
-        ? 'border-[hsl(var(--emerald))] bg-[hsl(var(--emerald))]'
-        : 'border-[hsl(var(--border-hover))] bg-[hsl(var(--background))]'
-    }`}
+    className="auctum-bevel-toggle-track shrink-0"
   >
-    <span
-      className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-        checked ? 'translate-x-5' : 'translate-x-1'
-      }`}
-    />
+    <span className="auctum-bevel-toggle-knob" />
   </button>
 );
 

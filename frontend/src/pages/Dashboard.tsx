@@ -464,7 +464,7 @@ const QuickStart: React.FC<{ firstName?: string }> = ({ firstName }) => {
             type="button"
             onClick={() => navigate(action.path)}
             className={clsx(
-              'flex min-h-[76px] items-center gap-3 rounded-xl border border-border bg-[hsl(var(--background-card))] p-4 text-left',
+              'flex min-h-[76px] items-center gap-3 rounded-sm border border-border bg-[hsl(var(--background-card))] p-4 text-left',
               'transition-colors hover:border-primary hover:bg-[hsl(var(--background-accent))]',
               QUICK_START_FOCUS
             )}
@@ -486,7 +486,7 @@ const QuickStart: React.FC<{ firstName?: string }> = ({ firstName }) => {
           type="button"
           onClick={() => navigate('/storm-tracking')}
           className={clsx(
-            'flex min-h-[76px] items-center gap-3 rounded-xl border border-[hsl(var(--border-hover))] bg-[hsl(var(--background-elevated))] p-4 text-left',
+            'flex min-h-[76px] items-center gap-3 rounded-sm border border-[hsl(var(--border-hover))] bg-[hsl(var(--background-elevated))] p-4 text-left',
             'transition-colors hover:border-primary hover:bg-primary/10',
             QUICK_START_FOCUS
           )}

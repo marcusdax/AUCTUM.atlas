@@ -1,0 +1,214 @@
+{
+  "$schema": "https://impeccable.style/schemas/design.v1.json",
+  "name": "AUCTUM × ATLAS",
+  "version": "1.2.0",
+  "generatedFrom": [
+    "frontend/src/styles/index.css",
+    "frontend/tailwind.config.cjs",
+    "frontend/src/ui/design/tokens.json",
+    "frontend/index.html"
+  ],
+  "platform": "web",
+  "defaultTheme": "light",
+  "colors": {
+    "brand": {
+      "parchment": "#F1F2EA",
+      "parchmentDeep": "#D5DAC6",
+      "parchmentWarm": "#E9E2D6",
+      "ink": "#17231D",
+      "inkSoft": "#2A3A32",
+      "navy": "#1F2E33",
+      "oxblood": "#8C2F22",
+      "oxbloodDark": "#7A1F1F",
+      "sage": "#526055",
+      "slate": "#536056",
+      "gold": "#6D592D",
+      "goldBright": "#CB8622"
+    },
+    "semantic": {
+      "verified": "#27693B",
+      "verifiedHover": "#1F5730",
+      "review": "#7E5415",
+      "reviewHover": "#6A4611",
+      "flagged": "#8C2F22",
+      "flaggedHover": "#7A1F1F",
+      "info": "#1A6666"
+    },
+    "severity": {
+      "extreme": "#8C2F22",
+      "severe": "#7E5415",
+      "moderate": "#CB8622",
+      "minor": "#1A6666",
+      "unknown": "#6B7566"
+    },
+    "ramps": {
+      "primary": {
+        "50": "#F1F2EA",
+        "100": "#E5E8DC",
+        "200": "#D5DAC6",
+        "300": "#B8C2B4",
+        "400": "#90A095",
+        "500": "#526055",
+        "600": "#3F4D43",
+        "700": "#2A3A32",
+        "800": "#21302A",
+        "900": "#17231D",
+        "950": "#0E1712"
+      },
+      "slate": {
+        "50": "#F5F6F0",
+        "100": "#EBECE2",
+        "200": "#D8DBCB",
+        "300": "#B8C0AD",
+        "400": "#909B87",
+        "500": "#6F7C67",
+        "600": "#57634F",
+        "700": "#464F41",
+        "800": "#333B30",
+        "900": "#222922",
+        "950": "#151A15"
+      }
+    }
+  },
+  "typography": {
+    "families": {
+      "display": ["Fraunces", "Georgia", "Times New Roman", "serif"],
+      "sans": ["Archivo", "Helvetica Neue", "Arial", "sans-serif"],
+      "mono": ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"]
+    },
+    "scale": {
+      "xs": "0.6875rem",
+      "sm": "0.8125rem",
+      "md": "0.875rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+      "4xl": "2.25rem"
+    },
+    "lineHeights": {
+      "tight": 1.2,
+      "normal": 1.5,
+      "loose": 1.7
+    },
+    "letterSpacing": {
+      "display": "-0.015em",
+      "label": "0.08em",
+      "eyebrow": "0.14em"
+    }
+  },
+  "radii": {
+    "none": "0",
+    "sm": "2px",
+    "default": "2px",
+    "md": "2px",
+    "lg": "3px",
+    "xl": "4px",
+    "full": "9999px"
+  },
+  "spacing": {
+    "baseUnit": "4px",
+    "scale": {
+      "0": "0",
+      "1": "0.25rem",
+      "2": "0.5rem",
+      "3": "0.75rem",
+      "4": "1rem",
+      "5": "1.25rem",
+      "6": "1.5rem",
+      "8": "2rem",
+      "10": "2.5rem",
+      "12": "3rem",
+      "16": "4rem"
+    }
+  },
+  "layout": {
+    "headerHeight": "4rem",
+    "footerHeight": "2.25rem",
+    "sidebarWidth": "16rem",
+    "sidebarWidthCollapsed": "4rem",
+    "maxContentWidth": "1600px",
+    "minTouchTarget": "44px"
+  },
+  "components": [
+    {
+      "name": "Button",
+      "path": "frontend/src/components/ui/Button.tsx",
+      "variants": ["primary", "secondary", "ghost", "outline", "danger"],
+      "sizes": ["sm", "md", "lg", "xl"]
+    },
+    {
+      "name": "Card",
+      "path": "frontend/src/components/ui/Card.tsx",
+      "variants": ["default", "bordered", "interactive"]
+    },
+    {
+      "name": "Badge",
+      "path": "frontend/src/components/ui/Card.tsx",
+      "variants": ["default", "success", "warning", "danger", "info", "extreme", "severe", "moderate", "minor"]
+    },
+    {
+      "name": "StatusDot",
+      "path": "frontend/src/components/ui/Card.tsx"
+    },
+    {
+      "name": "DataTable",
+      "path": "frontend/src/components/ui/DataTable.tsx"
+    },
+    {
+      "name": "Input",
+      "path": "frontend/src/components/ui/Input.tsx"
+    },
+    {
+      "name": "Select",
+      "path": "frontend/src/components/ui/Select.tsx"
+    },
+    {
+      "name": "Modal",
+      "path": "frontend/src/components/ui/Modal.tsx"
+    },
+    {
+      "name": "Layout",
+      "path": "frontend/src/components/Layout.tsx"
+    }
+  ],
+  "surfaces": [
+    {
+      "slug": "dashboard",
+      "mode": "Operate",
+      "routes": ["/", "/dashboard"],
+      "brief": ".impeccable/surfaces/dashboard.md"
+    },
+    {
+      "slug": "storm-tracking",
+      "mode": "Operate",
+      "routes": ["/storm-tracking", "/command"],
+      "brief": ".impeccable/surfaces/storm-tracking.md"
+    },
+    {
+      "slug": "jobs-and-qc",
+      "mode": "Operate",
+      "routes": ["/jobs", "/jobs/:id", "/jobs/new"],
+      "brief": ".impeccable/surfaces/jobs-and-qc.md"
+    },
+    {
+      "slug": "estimates-and-leads",
+      "mode": "Operate",
+      "routes": ["/estimates", "/estimates/:jobId/new", "/estimates/:id", "/leads", "/leads/new", "/leads/:id"],
+      "brief": ".impeccable/surfaces/estimates-and-leads.md"
+    },
+    {
+      "slug": "public-passport-and-portal",
+      "mode": "Experience",
+      "routes": ["/p/:slug", "/portal"],
+      "brief": ".impeccable/surfaces/public-passport-and-portal.md"
+    },
+    {
+      "slug": "marketing",
+      "mode": "Persuade",
+      "routes": ["/m/:code", "/marketing"],
+      "brief": ".impeccable/surfaces/marketing.md"
+    }
+  ]
+}

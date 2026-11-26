@@ -63,20 +63,26 @@ import {
 // ─────────────────────────── Small presentational pieces ───────────────────────────
 
 const BrandShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <main className="min-h-screen bg-parchment text-ink [print-color-adjust:exact] print:bg-white print:p-0">
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">{children}</div>
+  <main className="auctum-cloth-board flex min-h-screen flex-col [print-color-adjust:exact] print:bg-white print:p-0">
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">{children}</div>
+    <div className="auctum-oxblood-trim print:hidden" aria-hidden="true" />
   </main>
 );
 
 const Masthead: React.FC<{ badge?: React.ReactNode }> = ({ badge }) => (
-  <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[hsl(var(--border))] pb-4">
+  <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#f1f2ea]/20 pb-4 print:border-[hsl(var(--border))]">
     <div className="flex items-center gap-3">
-      <span className="brand-seal h-11 w-11 shrink-0" aria-hidden="true">
+      <span
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#d9b464]/60 bg-[#102a1f] text-[#d9b464] print:border-[hsl(var(--border-hover))] print:bg-white print:text-ink"
+        aria-hidden="true"
+      >
         <ShieldCheck size={20} />
       </span>
       <div>
-        <p className="eyebrow">AUCTUM · Verified job record</p>
-        <p className="wordmark text-lg leading-tight">Job Passport</p>
+        <p className="font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-[#d9b464] print:text-[hsl(var(--text-tertiary))]">
+          AUCTUM · Verified job record
+        </p>
+        <p className="wordmark text-lg leading-tight text-[#f1f2ea] print:text-ink">Job Passport</p>
       </div>
     </div>
     <div className="flex flex-wrap items-center gap-2">
@@ -84,7 +90,7 @@ const Masthead: React.FC<{ badge?: React.ReactNode }> = ({ badge }) => (
       <button
         type="button"
         onClick={() => window.print()}
-        className="inline-flex min-h-11 items-center gap-2 border border-[hsl(var(--border-hover))] px-3 text-xs font-medium text-text-primary transition-colors hover:bg-[hsl(var(--background-accent))] print:hidden"
+        className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-[#d9b464] px-3.5 text-xs font-semibold text-[#102a1f] transition-opacity hover:opacity-95 print:hidden"
       >
         <Printer size={14} aria-hidden="true" />
         Print
@@ -117,12 +123,12 @@ const LoadingScreen: React.FC = () => (
   <BrandShell>
     <Masthead />
     <div
-      className="flex flex-col items-center justify-center gap-3 border border-[hsl(var(--border))] px-6 py-20 text-center"
+      className="auctum-dossier flex flex-col items-center justify-center gap-3 px-6 py-20 text-center"
       role="status"
       aria-live="polite"
     >
       <Loader2 size={28} className="animate-spin text-[hsl(var(--text-tertiary))]" aria-hidden="true" />
-      <p className="font-display text-xl">Loading verified job record…</p>
+      <p className="font-display text-xl text-ink">Loading verified job record…</p>
       <p className="text-sm text-[hsl(var(--text-secondary))]">
         Checking the frozen snapshot published by the contractor.
       </p>
@@ -133,7 +139,7 @@ const LoadingScreen: React.FC = () => (
 const NotFoundScreen: React.FC = () => (
   <BrandShell>
     <Masthead />
-    <div className="border border-[hsl(var(--border))] px-6 py-16 text-center">
+    <div className="auctum-dossier px-6 py-16 text-center">
       <div className="brand-seal mx-auto h-14 w-14" aria-hidden="true">
         <BadgeX size={24} />
       </div>
@@ -156,7 +162,7 @@ const ErrorScreen: React.FC<{
 }> = ({ message, unavailable, onRetry, isRetrying }) => (
   <BrandShell>
     <Masthead />
-    <div className="border border-[hsl(var(--border))] px-6 py-14 text-center" role="alert">
+    <div className="auctum-dossier px-6 py-14 text-center" role="alert">
       <div className="brand-seal mx-auto h-14 w-14" aria-hidden="true">
         <Fingerprint size={24} />
       </div>
@@ -170,7 +176,7 @@ const ErrorScreen: React.FC<{
         type="button"
         onClick={onRetry}
         disabled={isRetrying}
-        className="mt-5 inline-flex min-h-11 items-center gap-2 border border-[hsl(var(--border-hover))] px-4 text-sm font-medium text-text-primary transition-colors hover:bg-[hsl(var(--background-accent))] disabled:opacity-60"
+        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] px-4 text-sm font-medium text-text-primary transition-colors hover:bg-[hsl(var(--background-accent))] disabled:opacity-60"
       >
         {isRetrying && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
         {isRetrying ? 'Retrying…' : 'Try again'}
@@ -289,6 +295,44 @@ const PublicPassportPage: React.FC = () => {
         }
       />
 
+      {/* Circuit-board verification schematic bar (hidden on print) */}
+      <div
+        className="mb-6 overflow-hidden rounded-sm border border-[#f1f2ea]/20 bg-[#102a1f]/75 print:hidden"
+        aria-label="Verification chain"
+      >
+        <div
+          className="grid grid-cols-8 border-b border-[#f1f2ea]/15 py-1 text-center font-mono text-[0.625rem] text-[#f1f2ea]/45"
+          aria-hidden="true"
+        >
+          <span>1</span><span>2</span><span>3</span><span>4</span>
+          <span>5</span><span>6</span><span>7</span><span>8</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 font-mono text-[0.6875rem]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-sm border border-[#d9b464]/70 bg-[#143527] px-2.5 py-1 text-[#f1f2ea]">
+              N1 · {photoCountLabel(passport.job.photoCount)}
+            </span>
+            <span className="h-[2px] w-4 bg-[#e05a3a]" aria-hidden="true" />
+            <span className="rounded-sm border border-[#d9b464]/70 bg-[#143527] px-2.5 py-1 text-[#f1f2ea]">
+              N2 · QC {passedChecks}/{checks}
+            </span>
+            <span className="h-[2px] w-4 bg-[#e05a3a]" aria-hidden="true" />
+            <span className="rounded-sm border border-[#d9b464]/70 bg-[#143527] px-2.5 py-1 text-[#f1f2ea]">
+              N3 · {ledgerEntries.length} LEDGER
+            </span>
+            <span className="h-[2px] w-4 bg-[#48a868]" aria-hidden="true" />
+            <span className="rounded-sm border border-[#48a868] bg-[#143527] px-2.5 py-1 text-[#48a868]">
+              N4 · {shortDigest(verifyQuery.data?.contentDigest ?? passport.verify.digest)}
+            </span>
+          </div>
+          <span className="text-[0.625rem] uppercase tracking-[0.14em] text-[#d9b464]">
+            REV v{passport.version} · {passport.verify.algorithm}
+          </span>
+        </div>
+      </div>
+
+      {/* Tactile Parchment Dossier */}
+      <div className="auctum-dossier p-5 sm:p-8 print:border-0 print:p-0">
       {/* Hero */}
       <header className="border border-[hsl(var(--border))] p-6 sm:p-8 print:break-inside-avoid">
         <div className="flex flex-wrap items-start justify-between gap-6">
@@ -586,14 +630,18 @@ const PublicPassportPage: React.FC = () => {
         </section>
       )}
 
+      </div>
+
       {/* Footer */}
-      <footer className="mt-8 border-t border-[hsl(var(--border))] pt-4 text-xs text-[hsl(var(--text-tertiary))]">
+      <footer className="mt-8 border-t border-[#f1f2ea]/20 pt-4 text-xs text-[#f1f2ea]/75 print:border-[hsl(var(--border))] print:text-[hsl(var(--text-tertiary))]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p>
             {passport.company.name} · Published {formatDate(passport.publishedAt)} · Version{' '}
             {passport.version}
           </p>
-          <p className="font-mono uppercase tracking-[0.12em]">AUCTUM · Job Passport</p>
+          <p className="font-mono uppercase tracking-[0.12em] text-[#d9b464] print:text-[hsl(var(--text-tertiary))]">
+            AUCTUM · Job Passport
+          </p>
         </div>
         <p className="mt-2 max-w-3xl leading-relaxed">
           This record was published by {passport.company.name}. It contains no customer names, phone

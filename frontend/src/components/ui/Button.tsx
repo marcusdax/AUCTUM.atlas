@@ -39,26 +39,26 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const leadingIcon = icon ?? leftIcon;
 
     const baseClasses = [
-      'inline-flex items-center justify-center gap-2 rounded-lg font-medium',
-      'transition-all duration-150 ease-out',
+      'inline-flex items-center justify-center gap-2 rounded-sm font-medium',
+      'transition-colors duration-150 ease-out',
       focusRing,
-      'disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:transform-none',
-      'motion-reduce:transition-none motion-reduce:hover:transform-none',
+      'disabled:cursor-not-allowed disabled:opacity-60',
+      'motion-reduce:transition-none',
     ];
 
     const variantClasses: Record<ButtonVariant, string> = {
       primary:
-        'bg-primary text-white hover:bg-primary-hover shadow-md hover:shadow-lg',
+        'bg-primary text-[hsl(var(--primary-foreground))] hover:bg-primary-hover',
       secondary:
         'bg-[hsl(var(--background-elevated))] text-text-primary border border-border ' +
-        'hover:bg-[hsl(var(--background-accent))]',
+        'hover:border-[hsl(var(--border-hover))] hover:bg-[hsl(var(--background-accent))]',
       ghost:
-        'bg-transparent text-text-secondary hover:bg-[hsl(var(--background-card))] ' +
+        'bg-transparent text-text-secondary hover:bg-[hsl(var(--background-accent))] ' +
         'hover:text-text-primary',
       outline:
         'border border-primary text-primary hover:bg-primary/10',
       danger:
-        'bg-[hsl(var(--red))] text-white hover:bg-[hsl(var(--red))]/90',
+        'bg-[hsl(var(--red))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--red-hover))]',
     };
 
     const sizeClasses: Record<ButtonSize, string> = {

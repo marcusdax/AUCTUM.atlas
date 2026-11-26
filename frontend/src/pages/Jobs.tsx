@@ -96,7 +96,7 @@ const JobCard: React.FC<{ job: Job; onClick: () => void }> = ({ job, onClick }) 
     <Card
       variant="interactive"
       onClick={onClick}
-      className="group cursor-pointer transition-transform duration-150 hover:scale-[1.02]"
+      className="group cursor-pointer"
     >
       <div className="space-y-4">
         {/* Header: job name + status badge */}

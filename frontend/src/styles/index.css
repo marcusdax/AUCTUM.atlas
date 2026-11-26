@@ -728,3 +728,367 @@ body::before {
   position: relative;
   z-index: 1;
 }
+
+/* ===== AUCTUM textured forest-cloth + etched PCB circuit board ===== */
+
+.auctum-cloth-board {
+  background-color: #0f2e22;
+  color: #f1f2ea;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M0 44h68l24 24h74l22-22h64l24 24h84M0 54h62l24 24h84l22-22h56l24 24h88M120 0v32l18 18v54l-24 24v64l20 20h76M248 0v48l-16 16v74l28 28v82l-18 18v94M0 246h54l26 26h92l24-24h82l26 26h56M0 258h48l26 26h104l24-24h72l26 26h60M312 110v96l-22 22h-68' stroke='%233d7d60' stroke-opacity='0.28' stroke-width='1.35'/%3E%3Cpath d='M188 124h46l18 18v44M74 166h52l18-18h36M260 296h64l16 16v48' stroke='%23d9b464' stroke-opacity='0.24' stroke-width='1.2'/%3E%3Cg stroke='%23d9b464' stroke-opacity='0.48' stroke-width='1.4' fill='%230b2219'%3E%3Ccircle cx='92' cy='68' r='3.2'/%3E%3Ccircle cx='166' cy='68' r='3.2'/%3E%3Ccircle cx='252' cy='46' r='3.2'/%3E%3Ccircle cx='138' cy='104' r='3.2'/%3E%3Ccircle cx='114' cy='192' r='3.2'/%3E%3Ccircle cx='232' cy='138' r='3.2'/%3E%3Ccircle cx='260' cy='166' r='3.2'/%3E%3Ccircle cx='260' cy='248' r='3.2'/%3E%3Ccircle cx='80' cy='272' r='3.2'/%3E%3Ccircle cx='172' cy='272' r='3.2'/%3E%3Ccircle cx='278' cy='248' r='3.2'/%3E%3Ccircle cx='312' cy='110' r='3.2'/%3E%3Ccircle cx='222' cy='228' r='3.2'/%3E%3C/g%3E%3Cg fill='%23d9b464' fill-opacity='0.26'%3E%3Crect x='22' y='118' width='16' height='3.5' rx='0.5'/%3E%3Crect x='22' y='126' width='16' height='3.5' rx='0.5'/%3E%3Crect x='22' y='134' width='16' height='3.5' rx='0.5'/%3E%3Crect x='22' y='142' width='16' height='3.5' rx='0.5'/%3E%3Crect x='22' y='150' width='16' height='3.5' rx='0.5'/%3E%3Crect x='22' y='158' width='16' height='3.5' rx='0.5'/%3E%3C/g%3E%3Cg fill='%23d9b464' fill-opacity='0.22' stroke='%23d9b464' stroke-opacity='0.35' stroke-width='0.8'%3E%3Crect x='294' y='288' width='32' height='32' rx='1' fill-opacity='0.08'/%3E%3Ccircle cx='302' cy='296' r='2.2'/%3E%3Ccircle cx='310' cy='296' r='2.2'/%3E%3Ccircle cx='318' cy='296' r='2.2'/%3E%3Ccircle cx='302' cy='304' r='2.2'/%3E%3Ccircle cx='310' cy='304' r='2.2'/%3E%3Ccircle cx='318' cy='304' r='2.2'/%3E%3Ccircle cx='302' cy='312' r='2.2'/%3E%3Ccircle cx='310' cy='312' r='2.2'/%3E%3Ccircle cx='318' cy='312' r='2.2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+    repeating-linear-gradient(
+      0deg,
+      rgba(241, 242, 234, 0.024) 0px,
+      rgba(241, 242, 234, 0.024) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(241, 242, 234, 0.024) 0px,
+      rgba(241, 242, 234, 0.024) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  background-size: 360px 360px, 4px 4px, 4px 4px;
+}
+
+.auctum-dossier {
+  background-color: #f7f6f0;
+  color: #17231d;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  background-image:
+    linear-gradient(#f7f6f0, #f7f6f0),
+    linear-gradient(135deg, #efe0b4 0%, #a58b4e 28%, #4d4227 52%, #c9af6d 78%, #f6ebca 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(23, 35, 29, 0.14),
+    0 14px 30px rgba(4, 15, 10, 0.42);
+}
+
+.auctum-bevel-toggle {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  background-image:
+    linear-gradient(180deg, #1b3d2e 0%, #10281e 100%),
+    linear-gradient(135deg, #f0e1b5 0%, #8f7742 40%, #3d341f 62%, #d9be7c 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* IC Chip / Microprocessor small text box */
+.auctum-ic-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e9e2d6;
+  background: linear-gradient(180deg, #252b28 0%, #161a18 100%);
+  border: 1.5px solid #6b726e;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.auctum-ic-chip::before,
+.auctum-ic-chip::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    #d9b464 0px,
+    #d9b464 3px,
+    transparent 3px,
+    transparent 7px
+  );
+  pointer-events: none;
+}
+.auctum-ic-chip::before { top: -4px; }
+.auctum-ic-chip::after { bottom: -4px; }
+
+/* Axial Resistor drag slider */
+.auctum-resistor-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #e5e8e6 0%, #8f9993 50%, #5b635e 100%);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.15);
+  outline: none;
+  cursor: pointer;
+}
+
+.auctum-resistor-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 18px;
+  border-radius: 7px / 50%;
+  border: 1px solid #6b522c;
+  background:
+    linear-gradient(
+      90deg,
+      #d8be92 0%,
+      #d8be92 16%,
+      #8c2f22 16%,
+      #8c2f22 25%,
+      #d8be92 25%,
+      #d8be92 36%,
+      #17231d 36%,
+      #17231d 45%,
+      #d8be92 45%,
+      #d8be92 56%,
+      #cb8622 56%,
+      #cb8622 65%,
+      #d8be92 65%,
+      #d8be92 78%,
+      #d9b464 78%,
+      #d9b464 86%,
+      #d8be92 86%
+    );
+  box-shadow:
+    inset 0 3px 4px rgba(255, 255, 255, 0.45),
+    inset 0 -3px 4px rgba(23, 35, 29, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+}
+
+.auctum-resistor-slider::-moz-range-thumb {
+  width: 44px;
+  height: 18px;
+  border-radius: 7px / 50%;
+  border: 1px solid #6b522c;
+  background:
+    linear-gradient(
+      90deg,
+      #d8be92 0%,
+      #d8be92 16%,
+      #8c2f22 16%,
+      #8c2f22 25%,
+      #d8be92 25%,
+      #d8be92 36%,
+      #17231d 36%,
+      #17231d 45%,
+      #d8be92 45%,
+      #d8be92 56%,
+      #cb8622 56%,
+      #cb8622 65%,
+      #d8be92 65%,
+      #d8be92 78%,
+      #d9b464 78%,
+      #d9b464 86%,
+      #d8be92 86%
+    );
+  box-shadow:
+    inset 0 3px 4px rgba(255, 255, 255, 0.45),
+    inset 0 -3px 4px rgba(23, 35, 29, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* Electrolytic Capacitor drag slider */
+.auctum-capacitor-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #e5e8e6 0%, #8f9993 50%, #5b635e 100%);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.15);
+  outline: none;
+  cursor: pointer;
+}
+
+.auctum-capacitor-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1.5px solid #cfd8dc;
+  background: linear-gradient(
+    180deg,
+    #2b4c7e 0%,
+    #1b355c 35%,
+    #d8e2e8 35%,
+    #d8e2e8 50%,
+    #142744 50%,
+    #0c1a2e 100%
+  );
+  box-shadow:
+    inset 2px 0 3px rgba(255, 255, 255, 0.45),
+    inset -2px 0 3px rgba(0, 0, 0, 0.55),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+}
+
+.auctum-capacitor-slider::-moz-range-thumb {
+  width: 44px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1.5px solid #cfd8dc;
+  background: linear-gradient(
+    180deg,
+    #2b4c7e 0%,
+    #1b355c 35%,
+    #d8e2e8 35%,
+    #d8e2e8 50%,
+    #142744 50%,
+    #0c1a2e 100%
+  );
+  box-shadow:
+    inset 2px 0 3px rgba(255, 255, 255, 0.45),
+    inset -2px 0 3px rgba(0, 0, 0, 0.55),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* Platform-wide machined metallic beveled card (light parchment & dark ink parity) */
+.auctum-bevel-card {
+  border: 2px solid transparent;
+  border-radius: 3px;
+  background-image:
+    linear-gradient(hsl(var(--background-card)), hsl(var(--background-card))),
+    linear-gradient(135deg, #f2e4ba 0%, #a58b4e 26%, #4f4225 50%, #c9af6d 76%, #f8edd0 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(23, 35, 29, 0.12),
+    0 2px 8px rgba(10, 26, 18, 0.1);
+}
+
+[data-theme='dark'] .auctum-bevel-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 6px 18px rgba(0, 0, 0, 0.38);
+}
+
+.auctum-bevel-toggle-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 52px;
+  height: 28px;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  background-image:
+    linear-gradient(180deg, #0b1e16 0%, #143326 100%),
+    linear-gradient(135deg, #f3e4b8 0%, #8d7540 35%, #3c321d 58%, #d9be7c 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.auctum-bevel-toggle-knob {
+  display: inline-block;
+  width: 20px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #fff3ce 0%, #d4b262 45%, #8a6e30 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 2px 4px rgba(0, 0, 0, 0.55);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.auctum-bevel-toggle-track[aria-checked='true'] .auctum-bevel-toggle-knob {
+  transform: translateX(22px);
+  background: linear-gradient(135deg, #98efb4 0%, #3ca05d 50%, #1d5d33 100%);
+}
+
+/* Global PCB Resistor styling for all range sliders platform-wide */
+input[type='range']:not(.auctum-capacitor-slider) {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #e5e8e6 0%, #8f9993 50%, #5b635e 100%);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.15);
+  outline: none;
+  cursor: grab;
+}
+
+input[type='range']:not(.auctum-capacitor-slider)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 18px;
+  border-radius: 7px / 50%;
+  border: 1px solid #6b522c;
+  background: linear-gradient(
+    90deg,
+    #d8be92 0%, #d8be92 16%,
+    #8c2f22 16%, #8c2f22 25%,
+    #d8be92 25%, #d8be92 36%,
+    #17231d 36%, #17231d 45%,
+    #d8be92 45%, #d8be92 56%,
+    #cb8622 56%, #cb8622 65%,
+    #d8be92 65%, #d8be92 78%,
+    #d9b464 78%, #d9b464 86%,
+    #d8be92 86%
+  );
+  box-shadow:
+    inset 0 3px 4px rgba(255, 255, 255, 0.45),
+    inset 0 -3px 4px rgba(23, 35, 29, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+}
+
+input[type='range']:not(.auctum-capacitor-slider)::-moz-range-thumb {
+  width: 44px;
+  height: 18px;
+  border-radius: 7px / 50%;
+  border: 1px solid #6b522c;
+  background: linear-gradient(
+    90deg,
+    #d8be92 0%, #d8be92 16%,
+    #8c2f22 16%, #8c2f22 25%,
+    #d8be92 25%, #d8be92 36%,
+    #17231d 36%, #17231d 45%,
+    #d8be92 45%, #d8be92 56%,
+    #cb8622 56%, #cb8622 65%,
+    #d8be92 65%, #d8be92 78%,
+    #d9b464 78%, #d9b464 86%,
+    #d8be92 86%
+  );
+  box-shadow:
+    inset 0 3px 4px rgba(255, 255, 255, 0.45),
+    inset 0 -3px 4px rgba(23, 35, 29, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.45);
+}
+
+.auctum-oxblood-trim {
+  height: 6px;
+  width: 100%;
+  background-color: var(--oxblood);
+}
+
+@media print {
+  .auctum-cloth-board {
+    background: #ffffff !important;
+    color: #17231d !important;
+  }
+  .auctum-dossier,
+  .auctum-bevel-card {
+    box-shadow: none !important;
+    background-image: none !important;
+    border-color: rgba(23, 35, 29, 0.25) !important;
+  }
+}
+

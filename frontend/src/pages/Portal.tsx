@@ -71,43 +71,91 @@ export default function Portal() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--text-primary))]">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 space-y-8">
-        <header className="border border-[hsl(var(--border))] bg-[hsl(var(--background-card))] p-6 sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2 max-w-3xl">
-              <p className="font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-[hsl(var(--text-tertiary))]">
+        <header className="auctum-cloth-board overflow-hidden rounded-sm border border-[#2a4a3b]">
+          {/* Numbered drafting ruler */}
+          <div
+            className="grid grid-cols-8 border-b border-[#f1f2ea]/15 py-1 text-center font-mono text-[0.625rem] text-[#f1f2ea]/45"
+            aria-hidden="true"
+          >
+            <span>1</span><span>2</span><span>3</span><span>4</span>
+            <span>5</span><span>6</span><span>7</span><span>8</span>
+          </div>
+
+          <div className="grid lg:grid-cols-12">
+            <div className="p-6 sm:p-8 lg:col-span-8 lg:border-r lg:border-[#f1f2ea]/15 space-y-4">
+              <p className="font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-[#d9b464]">
                 Partner Review Portal · Live Docker Stack
               </p>
-              <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight">
+              <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[#f1f2ea]">
                 Fieldwright Field Hub &times; AUCTUM.atlas
               </h1>
-              <p className="text-sm sm:text-base text-[hsl(var(--text-secondary))] leading-relaxed">
+              <p className="max-w-2xl text-sm sm:text-base text-[#f1f2ea]/85 leading-relaxed">
                 Two connected surfaces on one PostgreSQL + Redis + Express backend: the
-                operator-first <strong>Fieldwright Hub</strong> (sign up &rarr; Ground map &rarr; jobs queued)
-                and <strong>AUCTUM.atlas</strong> (NOAA storm intelligence, dispatch &amp; estimating CRM).
+                operator-first <strong className="text-[#f1f2ea]">Fieldwright Hub</strong> (sign up &rarr; Ground map &rarr; jobs queued)
+                and <strong className="text-[#f1f2ea]">AUCTUM.atlas</strong> (NOAA storm intelligence, dispatch &amp; estimating CRM).
               </p>
+
+              {/* Circuit-board signal trace strip */}
+              <div className="overflow-x-auto pt-2">
+                <div className="inline-flex min-w-[460px] items-center gap-2 font-mono text-[0.6875rem]">
+                  <span className="rounded-sm border border-[#d9b464] bg-[#102a1f]/90 px-2.5 py-1.5 text-[#f1f2ea]">
+                    N1 · NOAA SWATH
+                  </span>
+                  <span className="h-[2px] w-6 bg-[#e05a3a]" aria-hidden="true" />
+                  <span className="rounded-sm border border-[#d9b464] bg-[#102a1f]/90 px-2.5 py-1.5 text-[#f1f2ea]">
+                    N2 · LEAD SCORE
+                  </span>
+                  <span className="h-[2px] w-6 bg-[#e05a3a]" aria-hidden="true" />
+                  <span className="rounded-sm border border-[#d9b464] bg-[#102a1f]/90 px-2.5 py-1.5 text-[#f1f2ea]">
+                    N3 · ESTIMATE
+                  </span>
+                  <span className="h-[2px] w-6 bg-[#48a868]" aria-hidden="true" />
+                  <span className="rounded-sm border border-[#48a868] bg-[#102a1f]/90 px-2.5 py-1.5 text-[#48a868]">
+                    N4 · SHA-256 PASSPORT
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="border border-[hsl(var(--border))] bg-[hsl(var(--background-elevated))] px-4 py-3 text-xs space-y-1.5 min-w-[220px]">
-              <div className="font-mono uppercase tracking-[0.12em] text-[0.625rem] text-[hsl(var(--text-tertiary))]">
-                Stack Telemetry
+            {/* Engineering Title Block + Stack Telemetry */}
+            <div className="flex flex-col justify-between border-t border-[#f1f2ea]/15 lg:col-span-4 lg:border-t-0">
+              <div className="grid grid-cols-12 border-b border-[#f1f2ea]/15 font-mono text-[0.625rem] uppercase">
+                <div className="col-span-7 border-r border-[#f1f2ea]/15 p-3">
+                  <div className="text-[#f1f2ea]/50">System</div>
+                  <div className="mt-0.5 font-semibold text-[#f1f2ea]">ATLAS ENGINE</div>
+                </div>
+                <div className="col-span-3 border-r border-[#f1f2ea]/15 p-3">
+                  <div className="text-[#f1f2ea]/50">DWG NO.</div>
+                  <div className="mt-0.5 font-semibold text-[#f1f2ea]">ATL-1.2</div>
+                </div>
+                <div className="col-span-2 p-3">
+                  <div className="text-[#f1f2ea]/50">REV</div>
+                  <div className="mt-0.5 font-semibold text-[#d9b464]">B</div>
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>API Gateway</span>
-                <span className="font-mono font-medium">
-                  {health.isLoading ? 'checking…' : health.isError ? 'offline' : 'healthy'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>PostgreSQL</span>
-                <span className="font-mono font-medium">
-                  {dbConnected ? 'connected' : health.isLoading ? '…' : 'check'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>NOAA Feeds</span>
-                <span className="font-mono font-medium">
-                  {noaaConnected ? 'connected' : health.isLoading ? '…' : 'check'}
-                </span>
+
+              <div className="p-5 space-y-2 text-xs">
+                <div className="font-mono uppercase tracking-[0.14em] text-[0.625rem] text-[#d9b464]">
+                  Stack Telemetry
+                </div>
+                <div className="flex items-center justify-between gap-4 border-b border-[#f1f2ea]/10 pb-1.5">
+                  <span className="text-[#f1f2ea]/80">API Gateway</span>
+                  <span className="font-mono font-medium text-[#f1f2ea]">
+                    {health.isLoading ? 'checking…' : health.isError ? 'offline' : 'healthy'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 border-b border-[#f1f2ea]/10 pb-1.5">
+                  <span className="text-[#f1f2ea]/80">PostgreSQL</span>
+                  <span className="font-mono font-medium text-[#f1f2ea]">
+                    {dbConnected ? 'connected' : health.isLoading ? '…' : 'check'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-[#f1f2ea]/80">NOAA Feeds</span>
+                  <span className="font-mono font-medium text-[#f1f2ea]">
+                    {noaaConnected ? 'connected' : health.isLoading ? '…' : 'check'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -115,16 +163,17 @@ export default function Portal() {
           {error && (
             <div
               role="alert"
-              className="mt-4 border-l-2 border-[hsl(var(--red))] bg-[hsl(var(--red))]/10 px-3 py-2 text-sm text-[hsl(var(--red))]"
+              className="border-t border-[#e05a3a]/40 bg-[#8c2f22]/30 px-6 py-3 text-sm text-[#f1f2ea]"
             >
               {error}
             </div>
           )}
+          <div className="auctum-oxblood-trim" aria-hidden="true" />
         </header>
 
         <section className="grid gap-6 md:grid-cols-2" aria-label="Connected platforms">
           {/* Card 1: Fieldwright Field Hub */}
-          <article className="border border-[hsl(var(--border))] bg-[hsl(var(--background-card))] p-6 flex flex-col justify-between space-y-6">
+          <article className="auctum-bevel-card flex flex-col justify-between space-y-6 p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-3">
                 <div className="flex items-center gap-2">
@@ -168,7 +217,7 @@ export default function Portal() {
                 type="button"
                 disabled={busyTarget !== null}
                 onClick={() => enterDemo('/field')}
-                className="inline-flex items-center gap-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] px-4 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--primary-foreground))] transition-colors hover:bg-[hsl(var(--primary-hover))] disabled:opacity-60"
               >
                 <Sparkles size={15} aria-hidden="true" />
                 {busyTarget === '/field' ? 'Signing in…' : user ? 'Open Field Hub' : 'Launch Field Hub (Demo)'}
@@ -176,14 +225,14 @@ export default function Portal() {
               </button>
               <Link
                 to="/register"
-                className="inline-flex items-center gap-2 border border-[hsl(var(--border-hover))] text-[hsl(var(--text-primary))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--background-accent))]"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))]"
               >
                 Operator Sign Up
               </Link>
               <a
                 href="/downloads/fieldwright-debug.apk"
                 download="fieldwright-debug.apk"
-                className="inline-flex items-center gap-2 border border-[hsl(var(--border-hover))] text-[hsl(var(--text-primary))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--background-accent))]"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))]"
               >
                 <Download size={15} aria-hidden="true" />
                 Download Field App (.apk)
@@ -192,7 +241,7 @@ export default function Portal() {
           </article>
 
           {/* Card 2: AUCTUM.atlas */}
-          <article className="border border-[hsl(var(--border))] bg-[hsl(var(--background-card))] p-6 flex flex-col justify-between space-y-6">
+          <article className="auctum-bevel-card flex flex-col justify-between space-y-6 p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-3">
                 <div className="flex items-center gap-2">
@@ -201,7 +250,7 @@ export default function Portal() {
                     AUCTUM.atlas (Storm &amp; CRM)
                   </span>
                 </div>
-                <span className="border border-[hsl(var(--border))] px-2 py-0.5 font-mono text-[0.625rem] uppercase">
+                <span className="rounded-sm border border-[hsl(var(--border))] px-2 py-0.5 font-mono text-[0.625rem] uppercase">
                   /command · /storm-tracking
                 </span>
               </div>
@@ -232,7 +281,7 @@ export default function Portal() {
                 type="button"
                 disabled={busyTarget !== null}
                 onClick={() => enterDemo('/command')}
-                className="inline-flex items-center gap-2 bg-[hsl(var(--red))] text-white px-4 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm bg-[hsl(var(--red))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--primary-foreground))] transition-colors hover:bg-[hsl(var(--red-hover))] disabled:opacity-60"
               >
                 <Radio size={15} aria-hidden="true" />
                 {busyTarget === '/command' ? 'Signing in…' : user ? 'Open Command Center' : 'Launch Command Center'}
@@ -242,7 +291,7 @@ export default function Portal() {
                 type="button"
                 disabled={busyTarget !== null}
                 onClick={() => enterDemo('/intelligence/atlas')}
-                className="inline-flex items-center gap-2 border border-[hsl(var(--border-hover))] text-[hsl(var(--text-primary))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--background-accent))]"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))]"
               >
                 <Satellite size={15} aria-hidden="true" />
                 Atlas Intelligence
@@ -251,7 +300,7 @@ export default function Portal() {
                 type="button"
                 disabled={busyTarget !== null}
                 onClick={() => enterDemo('/storm-tracking')}
-                className="inline-flex items-center gap-2 border border-[hsl(var(--border-hover))] text-[hsl(var(--text-primary))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--background-accent))]"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))]"
               >
                 Storm Map
               </button>
@@ -259,7 +308,7 @@ export default function Portal() {
                 type="button"
                 disabled={busyTarget !== null}
                 onClick={() => enterDemo('/jobs')}
-                className="inline-flex items-center gap-2 border border-[hsl(var(--border-hover))] text-[hsl(var(--text-primary))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--background-accent))]"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--text-primary))] transition-colors hover:bg-[hsl(var(--background-accent))]"
               >
                 CRM Jobs
               </button>

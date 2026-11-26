@@ -20,12 +20,12 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ) => {
     const isInteractive = variant === 'interactive' || typeof onClick === 'function';
 
-    const baseClasses = 'rounded-xl bg-[hsl(var(--background-card))] border transition-shadow';
+    const baseClasses = 'auctum-bevel-card transition-all duration-150';
 
     const variantClasses: Record<CardVariant, string> = {
-      default: 'border-border shadow-sm',
-      bordered: 'border-border',
-      interactive: 'border-border shadow-sm hover:shadow-md',
+      default: '',
+      bordered: '',
+      interactive: 'hover:brightness-[0.98] dark:hover:brightness-110',
     };
 
     const handleKeyDown = React.useCallback(
@@ -95,10 +95,11 @@ export interface BadgeProps {
 }
 
 export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', size = 'md', className }) => {
-  const baseClasses = 'inline-flex items-center rounded-sm font-medium';
+  const baseClasses =
+    'inline-flex items-center rounded-sm font-mono font-medium uppercase tracking-[0.06em]';
 
   const sizeClasses =
-    size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-0.5 text-xs';
+    size === 'sm' ? 'px-2 py-0.5 text-[0.625rem]' : 'px-2.5 py-0.5 text-[0.6875rem]';
 
   const variantClasses: Record<BadgeVariant, string> = {
     default: 'bg-[hsl(var(--background-accent))] text-text-secondary',

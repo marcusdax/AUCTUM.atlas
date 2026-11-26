@@ -229,7 +229,7 @@ const ListView: React.FC = () => {
           </Button>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-[hsl(var(--background-card))]">
+        <div className="overflow-x-auto rounded-sm border border-border bg-[hsl(var(--background-card))]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-[hsl(var(--background-accent))]">

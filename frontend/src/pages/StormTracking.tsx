@@ -523,7 +523,7 @@ const StormTracking: React.FC = () => {
             </p>
           )}
 
-          <div className="h-[520px] overflow-hidden rounded-xl border border-border lg:h-[600px]">
+          <div className="h-[520px] overflow-hidden rounded-sm border border-border lg:h-[600px]">
             <StormMap
               storms={visibleStorms}
               stormEvents={visibleEvents}
