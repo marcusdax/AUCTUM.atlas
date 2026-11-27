@@ -76,14 +76,24 @@ router.get('/storm-markers', async (req: AuthRequest, res, next) => {
         let lat: number | undefined;
         let lon: number | undefined;
 
-        if (alert.geometry.type === 'Point') {
+        if (alert.geometry.type === 'Point' && Array.isArray(alert.geometry.coordinates)) {
           [lon, lat] = alert.geometry.coordinates;
         } else if (alert.geometry.type === 'Polygon') {
-          const coords = alert.geometry.coordinates[0];
-          const sumLat = coords.reduce((sum: number, c: number[]) => sum + c[1], 0);
-          const sumLon = coords.reduce((sum: number, c: number[]) => sum + c[0], 0);
-          lat = sumLat / coords.length;
-          lon = sumLon / coords.length;
+          const coords = alert.geometry.coordinates?.[0];
+          if (Array.isArray(coords) && coords.length > 0) {
+            const sumLat = coords.reduce((sum: number, c: number[]) => sum + c[1], 0);
+            const sumLon = coords.reduce((sum: number, c: number[]) => sum + c[0], 0);
+            lat = sumLat / coords.length;
+            lon = sumLon / coords.length;
+          }
+        } else if (alert.geometry.type === 'MultiPolygon') {
+          const coords = alert.geometry.coordinates?.[0]?.[0];
+          if (Array.isArray(coords) && coords.length > 0) {
+            const sumLat = coords.reduce((sum: number, c: number[]) => sum + c[1], 0);
+            const sumLon = coords.reduce((sum: number, c: number[]) => sum + c[0], 0);
+            lat = sumLat / coords.length;
+            lon = sumLon / coords.length;
+          }
         }
 
         return {

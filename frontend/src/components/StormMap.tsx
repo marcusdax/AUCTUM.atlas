@@ -741,6 +741,7 @@ const StormMap: React.FC<StormMapProps> = ({
   const themeMode = useThemeMode();
   const baseLayerId: BasemapId = basemapChoice ?? defaultBasemap(themeMode);
   const [radarOpacity, setRadarOpacity] = useState(DEFAULT_RADAR_OPACITY);
+  const [showMicroRings, setShowMicroRings] = useState(true);
 
   // Storm Intelligence overlay visibility (wired to shared mapLayersStore)
   const alertPolygonsVisible =
@@ -1138,6 +1139,15 @@ const StormMap: React.FC<StormMapProps> = ({
             aria-pressed={showRadar}
           >
             <Wind size={20} aria-hidden={showRadar} />
+          </button>
+          <button
+            className={`control-btn ${showMicroRings ? 'radar-active' : ''}`}
+            onClick={() => setShowMicroRings((v) => !v)}
+            title={showMicroRings ? 'Hide 0.5 / 1.0 / 1.5 mi dispatch rings' : 'Show 0.5 / 1.0 / 1.5 mi dispatch rings'}
+            aria-label={showMicroRings ? 'Hide dispatch range rings' : 'Show dispatch range rings'}
+            aria-pressed={showMicroRings}
+          >
+            <Target size={18} />
           </button>
           <button
             className="control-btn"
@@ -1581,38 +1591,85 @@ const StormMap: React.FC<StormMapProps> = ({
         {/* Background map click handler */}
         {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
 
-        {/* Selected location indicator */}
+        {/* Selected location indicator & AUCTUM.Insights micro-zone dispatch rings (0.5 / 1.0 / 1.5 mi) */}
         {selectedPosition && (
-          <Circle
-            center={selectedPosition}
-            radius={5000}
-            pathOptions={{
-              fillColor: '#3b82f6',
-              fillOpacity: 0.2,
-              color: '#3b82f6',
-              weight: 2,
-              opacity: 0.6,
-            }}
-            aria-label="Selected location indicator"
-          >
-            <Popup
-              className="storm-popup-modern"
-              aria-label="Selected location"
+          <>
+            {showMicroRings && (
+              <>
+                <Circle
+                  center={selectedPosition}
+                  radius={2414}
+                  pathOptions={{
+                    fillColor: '#06b6d4',
+                    fillOpacity: 0.04,
+                    color: '#06b6d4',
+                    weight: 1.5,
+                    dashArray: '6 5',
+                    opacity: 0.65,
+                  }}
+                >
+                  <Popup>1.5 mi Micro-Zone Outer Band ($0.76/mi travel band)</Popup>
+                </Circle>
+                <Circle
+                  center={selectedPosition}
+                  radius={1609}
+                  pathOptions={{
+                    fillColor: '#10b981',
+                    fillOpacity: 0.06,
+                    color: '#10b981',
+                    weight: 1.5,
+                    dashArray: '4 4',
+                    opacity: 0.75,
+                  }}
+                >
+                  <Popup>1.0 mi Core H3 Canvass Buffer (30-min arrival ring)</Popup>
+                </Circle>
+                <Circle
+                  center={selectedPosition}
+                  radius={805}
+                  pathOptions={{
+                    fillColor: '#f59e0b',
+                    fillOpacity: 0.09,
+                    color: '#f59e0b',
+                    weight: 1.75,
+                    opacity: 0.85,
+                  }}
+                >
+                  <Popup>0.5 mi Immediate Swath Priority Ring</Popup>
+                </Circle>
+              </>
+            )}
+            <Circle
+              center={selectedPosition}
+              radius={5000}
+              pathOptions={{
+                fillColor: '#3b82f6',
+                fillOpacity: 0.14,
+                color: '#3b82f6',
+                weight: 2,
+                opacity: 0.5,
+              }}
+              aria-label="Selected location indicator"
             >
-              <div className="popup-content-modern">
-                <div className="popup-header">
-                  <span className="badge badge-info">Location</span>
+              <Popup
+                className="storm-popup-modern"
+                aria-label="Selected location"
+              >
+                <div className="popup-content-modern">
+                  <div className="popup-header">
+                    <span className="badge badge-info">Location</span>
+                  </div>
+                  <h4>Selected Location</h4>
+                  <p className="popup-period">
+                    Lat: {selectedLocation!.lat.toFixed(4)}
+                  </p>
+                  <p className="popup-period">
+                    Lng: {selectedLng!.toFixed(4)}
+                  </p>
                 </div>
-                <h4>Selected Location</h4>
-                <p className="popup-period">
-                  Lat: {selectedLocation!.lat.toFixed(4)}
-                </p>
-                <p className="popup-period">
-                  Lng: {selectedLng!.toFixed(4)}
-                </p>
-              </div>
-            </Popup>
-          </Circle>
+              </Popup>
+            </Circle>
+          </>
         )}
       </MapContainer>
     </div>

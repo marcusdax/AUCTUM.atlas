@@ -54,8 +54,37 @@ function VectorBasemap({ styleUrl, attribution, onFail }: { styleUrl: string; at
         gl.addTo(map);
         // Keep the basemap under every overlay, including tile overlays such as radar.
         gl.getContainer()?.style.setProperty('z-index', '0');
+        const mlMap = gl.getMaplibreMap();
+        const add3DBuildings = () => {
+          if (disposed) return;
+          if (!mlMap || typeof mlMap.getStyle !== 'function') return;
+          if (mlMap.getLayer('auctum-3d-buildings')) return;
+          const style = mlMap.getStyle();
+          const sources = (style && style.sources) || {};
+          const vecSource = Object.keys(sources).find((k) => sources[k]?.type === 'vector');
+          if (!vecSource) return;
+          try {
+            mlMap.addLayer({
+              id: 'auctum-3d-buildings',
+              source: vecSource,
+              'source-layer': 'building',
+              type: 'fill-extrusion',
+              minzoom: 13.5,
+              paint: {
+                'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'render_height'], 0, '#1e293b', 20, '#334155', 60, '#475569'],
+                'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 10],
+                'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+                'fill-extrusion-opacity': 0.52,
+              },
+            });
+          } catch {
+            // Ignore when the vector style lacks a building source layer
+          }
+        };
+        mlMap.on('load', add3DBuildings);
+        mlMap.on('style.load', add3DBuildings);
         // A rejected key or a missing style falls back to raster instead of a blank map.
-        gl.getMaplibreMap().on('error', (e) => {
+        mlMap.on('error', (e) => {
           const status = (e?.error as { status?: number } | undefined)?.status;
           if (status === 401 || status === 403 || status === 404) onFail();
         });

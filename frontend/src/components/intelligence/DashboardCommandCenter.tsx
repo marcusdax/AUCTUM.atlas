@@ -479,6 +479,13 @@ const HeaderBar: React.FC<{ systemStatus: 'LIVE' | 'SYNCING' | 'STALE' | 'DEGRAD
           <span>Reports</span>
         </Link>
         <Link
+          to="/reports?tab=revenue-model"
+          className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-secondary hover:text-text-primary"
+        >
+          <BarChart3 size={12} aria-hidden="true" />
+          <span>36M P&amp;L Model</span>
+        </Link>
+        <Link
           to="/settings/ai"
           className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-secondary hover:text-text-primary"
         >

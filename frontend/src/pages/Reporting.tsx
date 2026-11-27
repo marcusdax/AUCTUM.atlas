@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import Card, { Badge, StatusDot } from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import { RevenueModelTab } from '../components/reports/RevenueModelTab';
 import {
   Calendar,
   ChevronDown,
@@ -696,9 +697,9 @@ const ProductionEfficiency: React.FC<ProductionEfficiencyProps> = ({ data, isLoa
 
 // ─── Main Reporting Page ────────────────────────────────────
 
-type ReportTab = 'pipeline' | 'profitability' | 'production-efficiency' | 'storm-roi';
+type ReportTab = 'pipeline' | 'profitability' | 'production-efficiency' | 'storm-roi' | 'revenue-model';
 
-const VALID_TABS = new Set<ReportTab>(['pipeline', 'profitability', 'production-efficiency', 'storm-roi']);
+const VALID_TABS = new Set<ReportTab>(['pipeline', 'profitability', 'production-efficiency', 'storm-roi', 'revenue-model']);
 
 interface StormRoiReport {
   summary: {
@@ -877,6 +878,7 @@ const Reporting: React.FC = () => {
       profitability: 'profitability',
       'production-efficiency': 'production-efficiency',
       'storm-roi': 'storm-roi',
+      'revenue-model': 'storm-roi',
     };
 
     const res = await api.get('/reports/export', {
@@ -907,6 +909,7 @@ const Reporting: React.FC = () => {
     { value: 'profitability', label: 'Job Profitability' },
     { value: 'production-efficiency', label: 'Production Efficiency' },
     { value: 'storm-roi', label: 'Storm ROI & Evidence' },
+    { value: 'revenue-model', label: '36M Revenue Model' },
   ] as const;
 
   return (
@@ -1008,6 +1011,7 @@ const Reporting: React.FC = () => {
             error={stormRoiError}
           />
         )}
+        {activeTab === 'revenue-model' && <RevenueModelTab />}
       </div>
     </div>
   );

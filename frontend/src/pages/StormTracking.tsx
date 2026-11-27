@@ -170,11 +170,10 @@ const StormTracking: React.FC = () => {
 
   const handleStormClick = useCallback(
     (storm: any) => {
-      const coords = storm.geometry?.coordinates;
-      const lat = coords?.[0]?.lat || coords?.[0]?.[1];
-      const lon = coords?.[0]?.lon || coords?.[0]?.[0];
-      if (lat != null && lon != null) {
-        handleMapClick(lat, lon);
+      const center = geometryCenter(storm.geometry);
+      if (center) {
+        setFocus({ center, zoom: 8 });
+        handleMapClick(center.lat, center.lng);
       }
     },
     [handleMapClick]
