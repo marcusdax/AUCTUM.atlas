@@ -1,14 +1,19 @@
-import '@testing-library/jest-dom';
+import * as matchers from '@testing-library/jest-dom/matchers';
+import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 import { vi, beforeAll, afterAll, expect } from 'vitest';
 import { toHaveNoViolations } from 'jest-axe';
 
-// Extend Vitest expect with jest-axe matcher
+// Extend Vitest Matchers<R, T> cleanly for Vitest 5 without Assertion<T> arity collision
 declare module 'vitest' {
-  interface Assertion<T = any> {
-    toHaveNoViolations(): T;
+  interface Matchers<
+    R extends void | Promise<void> = void | Promise<void>,
+    T = unknown,
+  > extends TestingLibraryMatchers<any, R> {
+    toHaveNoViolations(): R;
   }
 }
 
+expect.extend(matchers as unknown as Parameters<typeof expect.extend>[0]);
 expect.extend(toHaveNoViolations);
 
 // Mock matchMedia for components that use it

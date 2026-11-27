@@ -134,24 +134,55 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       loadUser: async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
+        let token = localStorage.getItem('accessToken') || get().accessToken;
+        const storedRefresh = localStorage.getItem('refreshToken') || get().refreshToken;
+
+        if (!token && !storedRefresh) {
           set({ isAuthenticated: false, isLoading: false });
           return;
         }
 
         set({ isLoading: true });
         try {
-          const res = await axios.get(`${API_BASE}/api/v1/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          if (!token && storedRefresh) {
+            await get().refreshAccessToken();
+            token = localStorage.getItem('accessToken') || get().accessToken;
+          }
 
-          set({
-            user: res.data.user,
-            accessToken: token,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+          const fetchMe = (bearer: string) =>
+            axios.get(`${API_BASE}/api/v1/auth/me`, {
+              headers: { Authorization: `Bearer ${bearer}` },
+            });
+
+          try {
+            const res = await fetchMe(token!);
+            set({
+              user: res.data.user,
+              accessToken: token,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } catch (meErr: any) {
+            if (meErr?.response?.status === 401 && storedRefresh) {
+              // Access token expired (e.g. >15m) or rotated across container rebuild — exchange refresh token silently
+              const refreshRes = await axios.post(`${API_BASE}/api/v1/auth/refresh`, {
+                refreshToken: storedRefresh,
+              });
+              const { accessToken: nextAccess, refreshToken: nextRefresh } = refreshRes.data;
+              localStorage.setItem('accessToken', nextAccess);
+              localStorage.setItem('refreshToken', nextRefresh || storedRefresh);
+              const meRetry = await fetchMe(nextAccess);
+              set({
+                user: meRetry.data.user,
+                accessToken: nextAccess,
+                refreshToken: nextRefresh || storedRefresh,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+              return;
+            }
+            throw meErr;
+          }
         } catch (error) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');

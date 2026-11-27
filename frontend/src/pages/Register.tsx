@@ -68,11 +68,15 @@ const Register: React.FC = () => {
   const extractError = (err: unknown): string => {
     if (err && typeof err === 'object') {
       const e = err as {
-        response?: { data?: { message?: string } };
+        response?: { data?: { error?: string; message?: string; errors?: Array<{ msg?: string }> } };
         message?: string;
       };
       return (
-        e.response?.data?.message ?? e.message ?? 'Unable to create your account.'
+        e.response?.data?.error ??
+        e.response?.data?.message ??
+        e.response?.data?.errors?.[0]?.msg ??
+        e.message ??
+        'Unable to create your account.'
       );
     }
     return 'Unable to create your account.';

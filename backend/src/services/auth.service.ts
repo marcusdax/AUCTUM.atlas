@@ -49,8 +49,9 @@ export const comparePassword = async (password: string, hash: string): Promise<b
 };
 
 export const registerCompany = async (data: RegisterData) => {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email },
+  const normalizedEmail = data.email.trim().toLowerCase();
+  const existingUser = await prisma.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
   });
 
   if (existingUser) {
@@ -62,7 +63,7 @@ export const registerCompany = async (data: RegisterData) => {
   const result = await prisma.$transaction(async (tx) => {
     const company = await tx.company.create({
       data: {
-        name: data.companyName,
+        name: data.companyName.trim(),
         phone: data.phone,
         settings: {},
       },
@@ -71,10 +72,10 @@ export const registerCompany = async (data: RegisterData) => {
     const user = await tx.user.create({
       data: {
         companyId: company.id,
-        email: data.email,
+        email: normalizedEmail,
         passwordHash,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
         role: 'OWNER',
       },
     });
@@ -108,8 +109,9 @@ export const registerCompany = async (data: RegisterData) => {
 };
 
 export const loginUser = async (data: LoginData) => {
-  const user = await prisma.user.findUnique({
-    where: { email: data.email },
+  const normalizedEmail = data.email.trim();
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
     include: { company: true },
   });
 

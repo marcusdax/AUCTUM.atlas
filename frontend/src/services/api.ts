@@ -87,8 +87,15 @@ apiClient.interceptors.response.use(
           refreshToken,
         });
 
-        const { accessToken } = response.data;
+        const { accessToken, refreshToken: nextRefreshToken } = response.data;
         localStorage.setItem('accessToken', accessToken);
+        if (nextRefreshToken) {
+          localStorage.setItem('refreshToken', nextRefreshToken);
+        }
+        useAuthStore.setState((state) => ({
+          accessToken,
+          refreshToken: nextRefreshToken || state.refreshToken,
+        }));
 
         apiClient.defaults.headers.Authorization = `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -99,6 +106,7 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        useAuthStore.setState({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

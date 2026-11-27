@@ -135,10 +135,10 @@ function App() {
 
           {/* Intelligence Command Center (Atlas Helios) */}
           <Route path="command" element={<StormTrackingPage />} />
-          <Route path="intelligence/atlas" element={<Navigate to="/storm-tracking" replace />} />
-          <Route path="intelligence/helios" element={<Navigate to="/storm-tracking" replace />} />
-          <Route path="intelligence" element={<Navigate to="/storm-tracking" replace />} />
-          <Route path="intelligence/system" element={<Navigate to="/settings/ai" replace />} />
+          <Route path="intelligence/atlas" element={<AtlasIntelligencePage />} />
+          <Route path="intelligence/helios" element={<HeliosIntelligencePage />} />
+          <Route path="intelligence" element={<IntelligencePage />} />
+          <Route path="intelligence/system" element={<SystemIntelligencePage />} />
 
           {/* Storm Tracking (preserved from Atlas Helios) */}
           <Route path="storm-tracking" element={<StormTrackingPage />} />

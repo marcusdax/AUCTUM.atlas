@@ -104,10 +104,10 @@ const AtlasIntelligencePage: React.FC = () => {
           hint="TITAN · TVS · Hail · Wind · Flood"
         />
         <Metric
-          title="ALERT PRECISION"
-          value="91.4%"
-          state="SYNCING"
-          hint="NOAA validation"
+          title="3D + RANGE RINGS"
+          value="0.5 / 1.0 / 1.5 mi"
+          state="LIVE"
+          hint="Extruded footprints + micro-zones"
         />
       </div>
 
@@ -119,7 +119,7 @@ const AtlasIntelligencePage: React.FC = () => {
 
       <Card
         title="Live Atlas Spatial Map"
-        subtitle="Toggle Storm Detection Layers & Tracking Algorithms below to update overlays in real time"
+        subtitle="Toggle Storm Detection Layers, 3D building footprints & 0.5/1.0/1.5 mi range rings to target properties"
       >
         <div className="h-[460px] w-full rounded-lg overflow-hidden border border-border">
           <StormMap
@@ -133,22 +133,23 @@ const AtlasIntelligencePage: React.FC = () => {
 
       <StormLayerToggles />
 
-      <Card title="Recent Storm Events" subtitle="Persisted storm swaths & alerts">
+      <Card title="Recent Storm Events" subtitle="Persisted storm swaths & alerts ready for lead outreach">
         <div className="space-y-3">
-          {(stormEvents.length > 0
-            ? stormEvents.slice(0, 6).map((ev) => ({
-                id: ev.id,
-                name: ev.name,
-                severity: String(ev.severity).toUpperCase(),
-                time: ev.startDate ? new Date(ev.startDate).toLocaleDateString() : 'Active',
-                detail: ev.description || ev.eventType?.replace(/_/g, ' ') || 'Storm swath',
-              }))
-            : [
-                { id: 's1', name: 'Supercell Cluster - OK/TX', severity: 'EXTREME', time: '12 min ago', detail: '12 alerts · 342 properties' },
-                { id: 's2', name: 'Severe T-Storm Line - MS/AL', severity: 'SEVERE', time: '45 min ago', detail: '8 alerts · 156 properties' },
-                { id: 's3', name: 'Tornado Warning - KS/NE', severity: 'EXTREME', time: '1h 23m ago', detail: '5 alerts · 89 properties' },
-              ]
-          ).map((event) => (
+          {stormEvents.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-[hsl(var(--background-elevated))] p-4 text-sm text-text-secondary">
+              <span>No storm events ingested yet. Open Intelligence Fusion to sync live NOAA alerts.</span>
+              <Link to="/intelligence" className="font-medium underline text-text-primary">
+                Open Intelligence Fusion &rarr;
+              </Link>
+            </div>
+          ) : (
+            stormEvents.slice(0, 6).map((ev) => ({
+              id: ev.id,
+              name: ev.name,
+              severity: String(ev.severity).toUpperCase(),
+              time: ev.startDate ? new Date(ev.startDate).toLocaleDateString() : 'Active',
+              detail: ev.description || ev.eventType?.replace(/_/g, ' ') || 'Storm swath',
+            })).map((event) => (
             <Link
               key={event.id}
               to="/storm-tracking"
@@ -189,7 +190,8 @@ const AtlasIntelligencePage: React.FC = () => {
                 <span className="text-xs font-mono text-text-primary underline">Inspect &rarr;</span>
               </div>
             </Link>
-          ))}
+          ))
+          )}
         </div>
       </Card>
     </div>

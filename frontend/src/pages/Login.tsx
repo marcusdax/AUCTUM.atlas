@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthProvider';
 import Button from '../components/ui/Button';
 import { AlertCircle, Eye, EyeOff, Lock, LogIn, Mail, Sparkles, ShieldCheck } from 'lucide-react';
@@ -39,7 +39,6 @@ const AuctumSeal: React.FC<{ size?: number }> = ({ size = 56 }) => (
 
 const Login: React.FC = () => {
   const { login } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,8 +67,7 @@ const Login: React.FC = () => {
     setError('');
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      navigate('/');
+      await login(email.trim(), password);
     } catch (err) {
       setError(extractError(err));
     } finally {
@@ -77,10 +75,19 @@ const Login: React.FC = () => {
     }
   };
 
-  const fillDemo = () => {
+  const enterDemoWorkspace = async () => {
+    if (isSubmitting) return;
     setEmail(DEMO_EMAIL);
     setPassword(DEMO_PASSWORD);
     setError('');
+    setIsSubmitting(true);
+    try {
+      await login(DEMO_EMAIL, DEMO_PASSWORD);
+    } catch (err) {
+      setError(extractError(err));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -196,11 +203,12 @@ const Login: React.FC = () => {
           <div className="mt-6 border-t border-[hsl(var(--border))] pt-5">
             <button
               type="button"
-              onClick={fillDemo}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] bg-transparent px-4 py-2 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-text-secondary transition-colors hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--background-accent))] hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))]"
+              disabled={isSubmitting}
+              onClick={enterDemoWorkspace}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm border border-[hsl(var(--border-hover))] bg-transparent px-4 py-2 font-mono text-[0.625rem] uppercase tracking-[0.16em] text-text-secondary transition-colors hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--background-accent))] hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))] disabled:opacity-60"
             >
               <Sparkles size={14} aria-hidden="true" />
-              Enter the demo ledger
+              {isSubmitting ? 'Entering demo ledger…' : 'Enter the demo ledger'}
             </button>
             <p className="mt-3 text-center font-mono text-[0.625rem] tracking-[0.04em] text-text-tertiary">
               demo@roofprocrm.com · RoofPro!2026

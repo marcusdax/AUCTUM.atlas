@@ -451,6 +451,20 @@ const HeaderBar: React.FC<{ systemStatus: 'LIVE' | 'SYNCING' | 'STALE' | 'DEGRAD
           <span>Atlas Intelligence</span>
         </Link>
         <Link
+          to="/intelligence"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
+        >
+          <Cpu size={12} aria-hidden="true" />
+          <span>Intelligence Fusion</span>
+        </Link>
+        <Link
+          to="/intelligence/helios"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
+        >
+          <Zap size={12} aria-hidden="true" />
+          <span>Helios Brief Copilot</span>
+        </Link>
+        <Link
           to="/storm-tracking"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--background-elevated))] border border-border text-xs text-text-primary hover:bg-[hsl(var(--background-accent))]"
         >

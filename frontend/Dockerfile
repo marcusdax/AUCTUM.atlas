@@ -1,8 +1,8 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 # Public build-time settings (baked into the bundle; never put server secrets here).
@@ -14,10 +14,10 @@ ENV VITE_MAPMAP_STYLE_LIGHT=$VITE_MAPMAP_STYLE_LIGHT VITE_MAPMAP_STYLE_DARK=$VIT
 RUN npm run build:dev
 
 # Storybook stage for interactive development/review
-FROM node:20-alpine AS storybook
+FROM node:22-alpine AS storybook
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci --legacy-peer-deps --legacy-peer-deps
 COPY . .
 EXPOSE 6006
 CMD ["npm", "run", "storybook"]
