@@ -29,6 +29,7 @@ import { JWT_SECRET } from './config/secrets';
 import { originChecker } from './config/origins';
 import { SERVABLE_UPLOAD_EXTENSIONS } from './middleware/upload';
 import { authMiddleware, AuthRequest } from './middleware/auth';
+import { compressionMiddleware } from './middleware/compression';
 import fs from 'fs';
 
 // Configure environment
@@ -129,6 +130,7 @@ app.use(
     credentials: true,
   })
 );
+app.use(compressionMiddleware);
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));

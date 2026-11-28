@@ -4,6 +4,7 @@
  * all scoped to the authenticated company. Supports CSV/PDF export.
  */
 import { Router } from 'express';
+import { createHash } from 'node:crypto';
 import { PassThrough } from 'node:stream';
 import { AuthRequest } from '../middleware/auth';
 import { companyScope } from '../middleware/company';
@@ -1019,6 +1020,73 @@ function renderPdf(doc: any, report: ExportDocument): void {
     doc.moveDown(0.6);
   }
 }
+
+// ─── POST /audit-checkpoint (C2SP tlog-checkpoint / RFC 9162 Merkle receipt) ──
+router.post('/audit-checkpoint', async (req: AuthRequest, res, next) => {
+  try {
+    const companyId = req.companyId!;
+    const [packets, storms, ledgerEntries] = await Promise.all([
+      prisma.fieldEvidencePacket.findMany({
+        where: { companyId },
+        select: { id: true, headHash: true, sealedAt: true },
+        orderBy: { sealedAt: 'asc' },
+      }),
+      prisma.stormEvent.findMany({
+        where: { companyId },
+        select: { id: true, externalId: true, severity: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.fieldLedgerEntry.findMany({
+        where: { companyId },
+        select: { id: true, amountCents: true, kind: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    const leaves = [
+      ...packets.map((p) => `pkt:${p.id}:${p.headHash || 'unsealed'}`),
+      ...storms.map((s) => `storm:${s.id}:${s.externalId || s.severity}`),
+      ...ledgerEntries.map((l) => `ldg:${l.id}:${l.kind}:${l.amountCents}`),
+    ];
+
+    let layerHashes = (leaves.length > 0 ? leaves : [`empty:${companyId}`]).map((leaf) =>
+      createHash('sha256').update(leaf).digest('hex')
+    );
+
+    while (layerHashes.length > 1) {
+      const nextLayer: string[] = [];
+      for (let i = 0; i < layerHashes.length; i += 2) {
+        const left = layerHashes[i];
+        const right = layerHashes[i + 1] ?? left;
+        nextLayer.push(createHash('sha256').update(`${left}:${right}`).digest('hex'));
+      }
+      layerHashes = nextLayer;
+    }
+
+    const rootHashHex = layerHashes[0];
+    const rootHashB64 = Buffer.from(rootHashHex, 'hex').toString('base64');
+    const origin = `auctum.atlas/company/${companyId.slice(0, 8)}/v1`;
+    const issuedAt = new Date().toISOString();
+
+    res.json({
+      format: 'c2sp/tlog-checkpoint',
+      rfc: 'RFC 9162 / C2SP tlog-checkpoint',
+      origin,
+      issuedAt,
+      treeSize: leaves.length,
+      counts: {
+        sealedPackets: packets.length,
+        stormEvents: storms.length,
+        ledgerEntries: ledgerEntries.length,
+      },
+      rootHashHex,
+      rootHashB64,
+      checkpointNote: `${origin}\n${leaves.length}\n${rootHashB64}\n\n— issuedAt=${issuedAt}`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Make pure helpers available for testing / programmatic use
 export {

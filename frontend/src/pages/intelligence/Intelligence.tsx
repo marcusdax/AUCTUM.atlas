@@ -1,7 +1,6 @@
 /**
- * Intelligence Fusion — Live Cross-Source Customer Opportunity & Storm Verification Engine
- * Turns NWS alerts, NEXRAD radar swaths, H3 hex coverage, and CRM Leads/Jobs into
- * concrete homeowner verification briefs and canvassing actions.
+ * Intelligence Fusion — Live Cross-Source Customer Opportunity, Storm Verification
+ * & NHESS/CLIMADA Roof Underwriting Engine
  */
 
 import React, { useMemo, useState } from 'react';
@@ -16,6 +15,7 @@ import {
   RefreshCw,
   Satellite,
   Search,
+  ShieldAlert,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -29,6 +29,24 @@ import { aiApi } from '../../services/ai';
 import type { ImpactResult } from '../../types/ai';
 import type { WeatherAlert } from '../../types';
 
+type RoofMaterial = 'three_tab_asphalt' | 'architectural_shingle' | 'metal_class4';
+
+interface UnderwriteResponse {
+  hailInches: number;
+  hailMm: number;
+  windMph: number;
+  roofType: RoofMaterial;
+  terminalVelocityMs: number;
+  singleImpactEnergyJ: number;
+  effectiveEnergyJ: number;
+  materialThresholdMm: number;
+  damageRatioBand: { p10: number; p50: number; p90: number };
+  supplementReadiness: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  recommendedActions: string[];
+  methodology: string;
+  siteImpact: ImpactResult | null;
+}
+
 const PRESET_ZONES = [
   { label: 'Plano / Frisco, TX', lat: 33.05, lng: -96.75 },
   { label: 'Dallas Love Field, TX', lat: 32.847, lng: -96.851 },
@@ -36,11 +54,21 @@ const PRESET_ZONES = [
   { label: 'Fort Worth West, TX', lat: 32.755, lng: -97.33 },
 ];
 
+const ROOF_OPTIONS: Array<{ value: RoofMaterial; label: string }> = [
+  { value: 'three_tab_asphalt', label: 'Standard 3-Tab Asphalt' },
+  { value: 'architectural_shingle', label: 'Architectural Laminated Shingle' },
+  { value: 'metal_class4', label: 'Standing-Seam Metal / Class 4' },
+];
+
 const IntelligencePage: React.FC = () => {
   const qc = useQueryClient();
   const [latInput, setLatInput] = useState('33.0500');
   const [lngInput, setLngInput] = useState('-96.7500');
+  const [hailInches, setHailInches] = useState(1.5);
+  const [windMph, setWindMph] = useState(52);
+  const [roofType, setRoofType] = useState<RoofMaterial>('architectural_shingle');
   const [impactResult, setImpactResult] = useState<ImpactResult | null>(null);
+  const [underwriteResult, setUnderwriteResult] = useState<UnderwriteResponse | null>(null);
   const [checkedPoint, setCheckedPoint] = useState<{ lat: number; lng: number } | null>(null);
 
   const overviewQuery = useQuery({
@@ -83,13 +111,33 @@ const IntelligencePage: React.FC = () => {
     onError: () => toast.error('Lead rescore failed.'),
   });
 
-  const impactMutation = useMutation({
-    mutationFn: ({ lat, lng }: { lat: number; lng: number }) => aiApi.impact(lat, lng),
+  const underwriteMutation = useMutation({
+    mutationFn: ({
+      lat,
+      lng,
+      hail,
+      wind,
+      roof,
+    }: {
+      lat: number;
+      lng: number;
+      hail: number;
+      wind: number;
+      roof: RoofMaterial;
+    }) =>
+      api
+        .get<UnderwriteResponse>('/storm-intel/underwrite', {
+          params: { lat, lng, hailInches: hail, windMph: wind, roofType: roof },
+        })
+        .then((r) => r.data),
     onSuccess: (result, vars) => {
-      setImpactResult(result);
-      setCheckedPoint(vars);
+      setUnderwriteResult(result);
+      if (result.siteImpact) {
+        setImpactResult(result.siteImpact);
+      }
+      setCheckedPoint({ lat: vars.lat, lng: vars.lng });
     },
-    onError: () => toast.error('Could not score coordinates — verify lat/lng range.'),
+    onError: () => toast.error('Could not run property underwriting check — verify numeric inputs.'),
   });
 
   const convertMutation = useMutation({
@@ -115,44 +163,54 @@ const IntelligencePage: React.FC = () => {
     [leads]
   );
 
-  const runImpactCheck = (lat: number, lng: number) => {
+  const runVerification = (lat: number, lng: number) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       toast.error('Enter valid numeric latitude and longitude.');
       return;
     }
     setLatInput(lat.toFixed(4));
     setLngInput(lng.toFixed(4));
-    impactMutation.mutate({ lat, lng });
+    underwriteMutation.mutate({ lat, lng, hail: hailInches, wind: windMph, roof: roofType });
   };
 
-  const downloadVerificationBrief = () => {
-    if (!impactResult || !checkedPoint) return;
+  const downloadUnderwritingDossier = () => {
+    if (!underwriteResult || !checkedPoint) return;
+    const u = underwriteResult;
+    const impact = impactResult ?? u.siteImpact;
     const lines = [
-      'AUCTUM.atlas — Homeowner & Property Storm Verification Report',
+      '# AUCTUM.atlas — Property Storm & Hail Underwriting Dossier',
       `Generated: ${new Date().toISOString()}`,
       `Coordinates: ${checkedPoint.lat.toFixed(5)}, ${checkedPoint.lng.toFixed(5)}`,
-      `Deterministic Storm Impact Score: ${impactResult.score}/100 (${impactResult.severity})`,
       '',
-      'Impact Drivers:',
-      ...(impactResult.drivers.length > 0
-        ? impactResult.drivers.map((d) => `- ${d.label} (weight ${d.weight})`)
-        : ['- No active severe driver in radius']),
+      '## Physical Hail Impact & Roof Vulnerability (NHESS / CLIMADA Methodology)',
+      `- Hail Diameter: ${u.hailInches}" (${u.hailMm} mm)`,
+      `- Sustained / Oblique Wind Speed: ${u.windMph} mph`,
+      `- Roof System Evaluated: ${ROOF_OPTIONS.find((o) => o.value === u.roofType)?.label ?? u.roofType}`,
+      `- Vertical Terminal Velocity (vt): ${u.terminalVelocityMs} m/s`,
+      `- Vertical Kinetic Energy (E_kin): ${u.singleImpactEnergyJ} J · Wind-Adjusted Effective Energy: ${u.effectiveEnergyJ} J`,
+      `- Material Damage Ratio Band (nominal p10 / p50 / p90): ${Math.round(u.damageRatioBand.p10 * 100)}% – ${Math.round(u.damageRatioBand.p50 * 100)}% – ${Math.round(u.damageRatioBand.p90 * 100)}%`,
+      `- Carrier Supplement Readiness: **${u.supplementReadiness}**`,
       '',
-      'Nearby Tracked Storm Events:',
-      ...(impactResult.nearbyEvents.length > 0
-        ? impactResult.nearbyEvents.map(
-            (ev) => `- ${ev.name} [${ev.severity}] (${ev.distanceKm.toFixed(1)} km)`
-          )
-        : ['- None within threshold']),
+      '## Geospatial Swath Exposure',
+      ...(impact
+        ? [
+            `- Site Impact Score: ${impact.score}/100 (${impact.severity})`,
+            ...impact.nearbyEvents.map(
+              (ev) => `- Nearby Swath: ${ev.name} [${ev.severity}] (${ev.distanceKm.toFixed(1)} km)`
+            ),
+          ]
+        : ['- Coordinates outside tracked database swatch threshold.']),
       '',
-      'Recommended Field Next Steps:',
-      ...impactResult.recommendations.map((rec) => `- ${rec}`),
+      '## Field & Adjuster Inspection Protocol',
+      ...u.recommendedActions.map((a) => `- [ ] ${a}`),
+      '',
+      `> Methodology Note: ${u.methodology}`,
     ];
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' });
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `storm-verification-${checkedPoint.lat.toFixed(3)}_${checkedPoint.lng.toFixed(3)}.txt`;
+    a.download = `underwriting-dossier-${checkedPoint.lat.toFixed(3)}_${checkedPoint.lng.toFixed(3)}.md`;
     document.body.appendChild(a);
     a.click();
     URL.revokeObjectURL(url);
@@ -168,7 +226,7 @@ const IntelligencePage: React.FC = () => {
             Intelligence Fusion
           </h1>
           <p className="text-text-secondary mt-1">
-            Cross-source storm correlation &amp; customer verification workspace (NOAA + H3 Swaths + CRM Leads)
+            Cross-source storm correlation, NHESS hail kinetic underwriting &amp; customer verification workspace
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -230,52 +288,93 @@ const IntelligencePage: React.FC = () => {
           hint="Active jobs exposed to recent weather"
         />
         <Metric
-          title="AI & DETERMINISTIC ENGINES"
-          value={configuredProviders > 0 ? `${configuredProviders} BYOK + Local` : 'Local Fallback'}
+          title="AI & UNDERWRITING"
+          value={configuredProviders > 0 ? `${configuredProviders} BYOK + Local` : 'Local Physics + AI'}
           state="LIVE"
-          hint="Deterministic scoring always online"
+          hint="NHESS hail model & scoring online"
         />
       </div>
 
-      {/* Interactive Homeowner Storm Verification Tool */}
+      {/* Interactive Homeowner Storm Verification & NHESS/CLIMADA Hail Physics Calculator */}
       <Card
-        title="Homeowner Storm Impact Verification Tool"
-        subtitle="Check exact storm exposure for any property coordinate, generate a homeowner-ready verification sheet, or spin up a 1.5 mi canvass zone"
+        title="Homeowner Storm Verification & Hail Kinetic Underwriting Tool"
+        subtitle="Combine geospatial NOAA swath exposure with spherical ice kinetic energy physics (p10-p90 damage bands) for adjuster supplements"
       >
         <div className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">
-                Latitude
-              </label>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Latitude</label>
               <input
                 type="text"
                 value={latInput}
                 onChange={(e) => setLatInput(e.target.value)}
-                className="input w-36 font-mono text-sm"
+                className="input w-full font-mono text-sm"
                 placeholder="33.0500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">
-                Longitude
-              </label>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Longitude</label>
               <input
                 type="text"
                 value={lngInput}
                 onChange={(e) => setLngInput(e.target.value)}
-                className="input w-36 font-mono text-sm"
+                className="input w-full font-mono text-sm"
                 placeholder="-96.7500"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Hail Size (in): {hailInches.toFixed(2)}&quot;
+              </label>
+              <input
+                type="range"
+                min="0.5"
+                max="3.0"
+                step="0.25"
+                value={hailInches}
+                onChange={(e) => setHailInches(Number(e.target.value))}
+                className="w-full accent-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Wind Gust (mph): {windMph}
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="110"
+                step="5"
+                value={windMph}
+                onChange={(e) => setWindMph(Number(e.target.value))}
+                className="w-full accent-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Roof Assembly</label>
+              <select
+                value={roofType}
+                onChange={(e) => setRoofType(e.target.value as RoofMaterial)}
+                className="input w-full text-sm"
+              >
+                {ROOF_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="primary"
               size="sm"
               leftIcon={<Search size={14} />}
-              isLoading={impactMutation.isPending}
-              onClick={() => runImpactCheck(Number(latInput), Number(lngInput))}
+              isLoading={underwriteMutation.isPending}
+              onClick={() => runVerification(Number(latInput), Number(lngInput))}
             >
-              Score Property Impact
+              Run Property Underwriting
             </Button>
             {checkedPoint && (
               <>
@@ -298,21 +397,21 @@ const IntelligencePage: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   leftIcon={<Download size={14} />}
-                  onClick={downloadVerificationBrief}
+                  onClick={downloadUnderwritingDossier}
                 >
-                  Download Homeowner Brief
+                  Download Adjuster Dossier (.MD)
                 </Button>
               </>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-text-tertiary">Quick verify:</span>
+            <span className="text-text-tertiary">Quick verify zones:</span>
             {PRESET_ZONES.map((z) => (
               <button
                 key={z.label}
                 type="button"
-                onClick={() => runImpactCheck(z.lat, z.lng)}
+                onClick={() => runVerification(z.lat, z.lng)}
                 className="rounded border border-border bg-[hsl(var(--background-elevated))] px-2.5 py-1 text-text-secondary hover:text-text-primary"
               >
                 {z.label}
@@ -320,41 +419,75 @@ const IntelligencePage: React.FC = () => {
             ))}
           </div>
 
-          {impactResult && (
-            <div className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-[hsl(var(--background-elevated))] p-4 md:grid-cols-3">
-              <div>
-                <p className="text-xs uppercase text-text-tertiary">Deterministic Impact Score</p>
-                <p className="mt-1 text-3xl font-bold text-text-primary">
-                  {impactResult.score}
-                  <span className="text-sm font-normal text-text-tertiary"> / 100</span>
-                </p>
-                <p className="mt-1 text-xs font-medium text-emerald">{impactResult.severity}</p>
+          {underwriteResult && (
+            <div className="space-y-4 rounded-lg border border-border bg-[hsl(var(--background-elevated))] p-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div>
+                  <p className="text-xs uppercase text-text-tertiary">Geospatial Site Score</p>
+                  <p className="mt-1 text-2xl font-bold text-text-primary">
+                    {impactResult?.score ?? 0}
+                    <span className="text-xs font-normal text-text-tertiary"> / 100</span>
+                  </p>
+                  <p className="text-xs font-medium text-emerald">{impactResult?.severity ?? 'NONE'}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-text-tertiary">Impact Kinetic Energy</p>
+                  <p className="mt-1 text-2xl font-bold font-mono text-text-primary">
+                    {underwriteResult.effectiveEnergyJ} J
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    v_t {underwriteResult.terminalVelocityMs} m/s · {underwriteResult.hailMm} mm
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-text-tertiary">Damage Ratio (p10-p50-p90)</p>
+                  <p className="mt-1 text-2xl font-bold font-mono text-amber">
+                    {Math.round(underwriteResult.damageRatioBand.p50 * 100)}%
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    Band: {Math.round(underwriteResult.damageRatioBand.p10 * 100)}% –{' '}
+                    {Math.round(underwriteResult.damageRatioBand.p90 * 100)}% nominal
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-text-tertiary">Supplement Readiness</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-xl font-bold text-text-primary">
+                    <ShieldAlert size={18} className="text-amber" />
+                    {underwriteResult.supplementReadiness}
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    Threshold &ge; {underwriteResult.materialThresholdMm} mm
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs uppercase text-text-tertiary mb-1">Nearby Matched Swaths</p>
-                {impactResult.nearbyEvents.length === 0 ? (
-                  <p className="text-xs text-text-secondary">No tracked storms within 25 km.</p>
-                ) : (
-                  <ul className="space-y-1 text-xs text-text-primary">
-                    {impactResult.nearbyEvents.slice(0, 3).map((ev) => (
-                      <li key={ev.id}>
-                        <span className="font-medium">{ev.name}</span> · {ev.severity} ·{' '}
-                        {ev.distanceKm.toFixed(1)} km
+
+              <div className="grid grid-cols-1 gap-4 border-t border-border pt-3 md:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase text-text-tertiary mb-1">Nearby Matched Swaths</p>
+                  {!impactResult || impactResult.nearbyEvents.length === 0 ? (
+                    <p className="text-xs text-text-secondary">No tracked storms within 25 km.</p>
+                  ) : (
+                    <ul className="space-y-1 text-xs text-text-primary">
+                      {impactResult.nearbyEvents.slice(0, 3).map((ev) => (
+                        <li key={ev.id}>
+                          <span className="font-medium">{ev.name}</span> · {ev.severity} ·{' '}
+                          {ev.distanceKm.toFixed(1)} km
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-text-tertiary mb-1">Recommended Adjuster Protocol</p>
+                  <ul className="space-y-1 text-xs text-text-secondary">
+                    {underwriteResult.recommendedActions.map((rec, idx) => (
+                      <li key={idx} className="flex items-start gap-1.5">
+                        <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald" />
+                        <span>{rec}</span>
                       </li>
                     ))}
                   </ul>
-                )}
-              </div>
-              <div>
-                <p className="text-xs uppercase text-text-tertiary mb-1">Customer Next Steps</p>
-                <ul className="space-y-1 text-xs text-text-secondary">
-                  {impactResult.recommendations.slice(0, 3).map((rec, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5">
-                      <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald" />
-                      <span>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
+                </div>
               </div>
             </div>
           )}
@@ -408,12 +541,12 @@ const IntelligencePage: React.FC = () => {
 
         <Card
           title="Highest-Priority Customer Leads (Live Impact Score)"
-          subtitle="Click Score to inspect homeowner verification or jump straight to lead profile"
+          subtitle="Click Underwrite to run full hail energy & claim dossier check"
         >
           <div className="space-y-3">
             {sortedLeads.length === 0 ? (
               <div className="rounded-lg border border-border bg-[hsl(var(--background-elevated))] p-4 text-sm text-text-secondary">
-                No geocoded CRM leads yet. Use the Property Verification Tool above to create a 1.5 mi canvass zone.
+                No geocoded CRM leads yet. Use the Property Underwriting Tool above to create a 1.5 mi canvass zone.
               </div>
             ) : (
               sortedLeads.map((lead) => (
@@ -433,10 +566,10 @@ const IntelligencePage: React.FC = () => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => runImpactCheck(lead.lat, lead.lng)}
+                      onClick={() => runVerification(lead.lat, lead.lng)}
                       className="rounded border border-border px-2 py-1 text-xs text-text-secondary hover:text-text-primary"
                     >
-                      Verify
+                      Underwrite
                     </button>
                     <Link
                       to={`/leads/${lead.id}`}
@@ -457,9 +590,11 @@ const IntelligencePage: React.FC = () => {
           <strong>Connected Customer Modules:</strong> Swath Detection &amp; 3D Buildings ({' '}
           <Link to="/intelligence/atlas" className="underline text-text-primary">Atlas Intelligence</Link> ) · Adjuster
           Briefs ({' '}
-          <Link to="/intelligence/helios" className="underline text-text-primary">Helios Copilot</Link> ) · SHA-256
-          Chain &amp; Unit Economics ({' '}
-          <Link to="/reports?tab=revenue-model" className="underline text-text-primary">36M P&amp;L Model</Link> )
+          <Link to="/intelligence/helios" className="underline text-text-primary">Helios Copilot</Link> ) · C2SP Proof
+          Checkpoints ({' '}
+          <Link to="/intelligence/system" className="underline text-text-primary">System &amp; Proof</Link> ) · 36M P&amp;L
+          Simulator ({' '}
+          <Link to="/reports?tab=revenue-model" className="underline text-text-primary">Reports</Link> )
         </span>
         <Link to="/field" className="inline-flex items-center gap-1 font-medium text-text-primary underline">
           <Satellite size={13} /> Open Field Hub

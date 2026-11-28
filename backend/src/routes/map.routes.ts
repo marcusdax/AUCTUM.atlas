@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { authMiddleware } from '../middleware/auth';
+import { cacheGet, cacheSet } from '../config/redis';
 import noaaService, { SEVERITY_COLORS } from '../services/NOAAWeatherService';
 import { prisma } from '../prisma';
 import { normalizeGeometry } from '../services/storm/geo';
@@ -14,12 +15,35 @@ import { extractLatLng } from '../services/storm/impact';
 const router = Router();
 router.use(authMiddleware);
 
+const MAP_CACHE_TTL_SEC = 60;
+
+async function readMapCache<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await cacheGet(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeMapCache(key: string, value: unknown): Promise<void> {
+  try {
+    await cacheSet(key, value, MAP_CACHE_TTL_SEC);
+  } catch {
+    // Non-fatal
+  }
+}
+
 /**
  * GET /maps/alerts-geojson — Get weather alerts as GeoJSON
  */
 router.get('/alerts-geojson', async (req: AuthRequest, res, next) => {
   try {
     const { severity, event } = req.query;
+    const cacheKey = `maps:alerts-geojson:${String(severity || 'all')}:${String(event || 'all')}`;
+    const cached = await readMapCache<Record<string, unknown>>(cacheKey);
+    if (cached) return res.json(cached);
+
     let alerts: { alerts: any[] } = { alerts: [] };
     try {
       alerts = await noaaService.getActiveAlerts({
@@ -52,6 +76,7 @@ router.get('/alerts-geojson', async (req: AuthRequest, res, next) => {
         })),
     };
 
+    await writeMapCache(cacheKey, geojson);
     res.json(geojson);
   } catch (error) {
     next(error);
@@ -63,6 +88,10 @@ router.get('/alerts-geojson', async (req: AuthRequest, res, next) => {
  */
 router.get('/storm-markers', async (req: AuthRequest, res, next) => {
   try {
+    const cacheKey = 'maps:storm-markers';
+    const cached = await readMapCache<Record<string, unknown>>(cacheKey);
+    if (cached) return res.json(cached);
+
     let alerts: { alerts: any[] } = { alerts: [] };
     try {
       alerts = await noaaService.getActiveAlerts({ limit: 100 });
@@ -110,7 +139,9 @@ router.get('/storm-markers', async (req: AuthRequest, res, next) => {
         };
       });
 
-    res.json({ markers, count: markers.length, timestamp: new Date().toISOString() });
+    const payload = { markers, count: markers.length, timestamp: new Date().toISOString() };
+    await writeMapCache('maps:storm-markers', payload);
+    res.json(payload);
   } catch (error) {
     next(error);
   }

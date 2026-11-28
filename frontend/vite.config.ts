@@ -43,6 +43,9 @@ export default defineConfig({
           if (/[/\\]node_modules[/\\](leaflet|react-leaflet)[/\\]/.test(id)) {
             return 'maps';
           }
+          if (/[/\\]node_modules[/\\](maplibre-gl|@maplibre)[/\\]/.test(id)) {
+            return 'maplibre-gl';
+          }
           if (/[/\\]node_modules[/\\](@radix-ui\/|lucide-react[/\\])/.test(id)) {
             return 'ui';
           }

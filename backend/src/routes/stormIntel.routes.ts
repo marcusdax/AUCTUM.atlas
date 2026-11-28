@@ -15,6 +15,7 @@
  */
 import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
+import { cacheDel, cacheGet, cacheSet } from '../config/redis';
 import { prisma } from '../prisma';
 import {
   convertStormZoneToLeads,
@@ -26,7 +27,38 @@ import {
 import { centroid as geometryCentroid, normalizeGeometry } from '../services/storm/geo';
 import { buildH3TerritoryGrid, type HexPointInput } from '../services/storm/hexGrid';
 import { extractLatLng } from '../services/storm/impact';
+import { evaluateHailUnderwriting, normalizeRoofMaterial } from '../services/storm/hailPhysics';
 import type { BBox } from '../services/storm/types';
+
+const SPATIAL_CACHE_TTL_SEC = 45;
+
+async function readSpatialCache<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await cacheGet(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSpatialCache(key: string, value: unknown): Promise<void> {
+  try {
+    await cacheSet(key, value, SPATIAL_CACHE_TTL_SEC);
+  } catch {
+    // Cache failures must never block storm intelligence responses
+  }
+}
+
+async function invalidateCompanySpatialCache(companyId: string): Promise<void> {
+  const daysBuckets = [7, 14, 30, 60, 90];
+  await Promise.allSettled(
+    daysBuckets.flatMap((d) => [
+      cacheDel(`storm-intel:overview:${companyId}:${d}`),
+      cacheDel(`storm-intel:geojson:${companyId}:${d}`),
+      cacheDel(`storm-intel:hex:${companyId}:${d}`),
+    ])
+  );
+}
 
 const router = Router();
 
@@ -95,14 +127,20 @@ router.get('/overview', async (req: AuthRequest, res, next) => {
   try {
     const companyId = req.user!.companyId;
     const days = parseDays(req.query.days);
+    const cacheKey = `storm-intel:overview:${companyId}:${days}`;
+    const cached = await readSpatialCache<Record<string, unknown>>(cacheKey);
+    if (cached) return res.json(cached);
+
     const context = await getStormContext(companyId, { days });
-    res.json({
+    const payload = {
       generatedAt: context.generatedAt,
       days,
       events: context.events,
       leads: context.leads,
       stats: context.stats,
-    });
+    };
+    await writeSpatialCache(cacheKey, payload);
+    res.json(payload);
   } catch (error) {
     next(error);
   }
@@ -113,6 +151,10 @@ router.get('/events.geojson', async (req: AuthRequest, res, next) => {
   try {
     const companyId = req.user!.companyId;
     const days = parseDays(req.query.days);
+    const cacheKey = `storm-intel:geojson:${companyId}:${days}`;
+    const cached = await readSpatialCache<Record<string, unknown>>(cacheKey);
+    if (cached) return res.json(cached);
+
     const context = await getStormContext(companyId, { days });
     const features = context.events
       .filter((event) => !!event.geometry)
@@ -133,7 +175,9 @@ router.get('/events.geojson', async (req: AuthRequest, res, next) => {
           source: event.source,
         },
       }));
-    res.json({ type: 'FeatureCollection', features });
+    const payload = { type: 'FeatureCollection', features };
+    await writeSpatialCache(cacheKey, payload);
+    res.json(payload);
   } catch (error) {
     next(error);
   }
@@ -144,6 +188,10 @@ router.get('/hex-grid', async (req: AuthRequest, res, next) => {
   try {
     const companyId = req.user!.companyId;
     const days = parseDays(req.query.days);
+    const cacheKey = `storm-intel:hex:${companyId}:${days}`;
+    const cached = await readSpatialCache<Record<string, unknown>>(cacheKey);
+    if (cached) return res.json(cached);
+
     const [context, jobs, spaces] = await Promise.all([
       getStormContext(companyId, { days }),
       prisma.job.findMany({ where: { companyId }, select: { propertyLatLng: true, name: true }, take: 300 }),
@@ -182,7 +230,9 @@ router.get('/hex-grid', async (req: AuthRequest, res, next) => {
       }
     }
 
-    res.json(buildH3TerritoryGrid(pts));
+    const grid = buildH3TerritoryGrid(pts);
+    await writeSpatialCache(cacheKey, grid);
+    res.json(grid);
   } catch (error) {
     next(error);
   }
@@ -213,6 +263,44 @@ router.get('/impact', async (req: AuthRequest, res, next) => {
   }
 });
 
+/** GET /underwrite?hailInches=1.25&windMph=50&roofType=architectural_shingle&lat=&lng=
+ * Physical NHESS/CLIMADA hail kinetic energy & probabilistic p10-p90 roof vulnerability calculator. */
+router.get('/underwrite', async (req: AuthRequest, res, next) => {
+  try {
+    const hailRaw = Number(req.query.hailInches ?? 1.25);
+    const windRaw = Number(req.query.windMph ?? 45);
+    if (!Number.isFinite(hailRaw) || hailRaw < 0 || hailRaw > 6) {
+      return res.status(400).json({ error: 'hailInches must be a number between 0 and 6' });
+    }
+    if (!Number.isFinite(windRaw) || windRaw < 0 || windRaw > 160) {
+      return res.status(400).json({ error: 'windMph must be a number between 0 and 160' });
+    }
+
+    const latValue = parseCoordinate(req.query.lat);
+    const lngValue = parseCoordinate(req.query.lng);
+    let siteImpact = null;
+    if (latValue !== null && lngValue !== null && lat(latValue) && lng(lngValue)) {
+      siteImpact = await getImpactForPoint(latValue, lngValue, {
+        companyId: req.user!.companyId,
+      });
+    }
+
+    const physics = evaluateHailUnderwriting({
+      hailInches: hailRaw,
+      windMph: windRaw,
+      roofType: normalizeRoofMaterial(req.query.roofType),
+      siteImpactScore: siteImpact?.score ?? 0,
+    });
+
+    res.json({
+      ...physics,
+      siteImpact,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 /** POST /sync { limit?, bbox? } — NOAA alert sync; degrades to cached events. */
 router.post('/sync', async (req: AuthRequest, res, next) => {
   const companyId = req.user!.companyId;
@@ -236,6 +324,7 @@ router.post('/sync', async (req: AuthRequest, res, next) => {
 
   try {
     const result = await syncNoaaEvents(companyId, { limit, ...(bbox ? { bbox } : {}) });
+    await invalidateCompanySpatialCache(companyId);
     return res.json(result);
   } catch (error) {
     // Last-resort degradation: DB-backed cached events, still HTTP 200.
@@ -276,6 +365,7 @@ router.post('/rescore-leads', async (req: AuthRequest, res, next) => {
     const result = await rescoreLeadsForCompany(companyId, {
       ...(eventId ? { eventId } : {}),
     });
+    await invalidateCompanySpatialCache(companyId);
     res.json(result);
   } catch (error) {
     next(error);
@@ -325,6 +415,7 @@ router.post('/convert-to-leads', async (req: AuthRequest, res, next) => {
       ...(label ? { label } : {}),
       ...(count ? { count } : {}),
     });
+    await invalidateCompanySpatialCache(companyId);
     res.json(result);
   } catch (error) {
     const status = (error as { status?: number }).status;

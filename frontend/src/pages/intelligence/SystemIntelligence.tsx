@@ -1,10 +1,10 @@
 /**
- * System Intelligence — Live Tenant Health, Sealed SHA-256 Chain & Operator Resources Desk
+ * System Intelligence — Live Tenant Health, Sealed SHA-256 Chain, C2SP Merkle Checkpoints & Operator Tools
  */
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Activity,
   BarChart3,
@@ -12,6 +12,7 @@ import {
   Copy,
   Database,
   Download,
+  Lock,
   RefreshCw,
   Server,
   ShieldCheck,
@@ -49,8 +50,25 @@ interface StormRoiSummary {
   };
 }
 
+interface CheckpointResponse {
+  format: string;
+  rfc: string;
+  origin: string;
+  issuedAt: string;
+  treeSize: number;
+  counts: {
+    sealedPackets: number;
+    stormEvents: number;
+    ledgerEntries: number;
+  };
+  rootHashHex: string;
+  rootHashB64: string;
+  checkpointNote: string;
+}
+
 const SystemIntelligencePage: React.FC = () => {
   const [copiedDiagnostics, setCopiedDiagnostics] = useState(false);
+  const [checkpoint, setCheckpoint] = useState<CheckpointResponse | null>(null);
 
   const healthQuery = useQuery({
     queryKey: ['system', 'health'],
@@ -70,6 +88,15 @@ const SystemIntelligencePage: React.FC = () => {
     staleTime: 30_000,
   });
 
+  const checkpointMutation = useMutation({
+    mutationFn: () => api.post<CheckpointResponse>('/reports/audit-checkpoint').then((r) => r.data),
+    onSuccess: (res) => {
+      setCheckpoint(res);
+      toast.success(`Issued C2SP Merkle checkpoint across ${res.treeSize} ledger leaves.`);
+    },
+    onError: () => toast.error('Could not generate audit checkpoint right now.'),
+  });
+
   const health = healthQuery.data;
   const roi = stormRoiQuery.data?.summary;
   const dbOk = health?.integrations?.database?.connected ?? false;
@@ -85,11 +112,25 @@ const SystemIntelligencePage: React.FC = () => {
       aiProvidersConfigured: (aiStatusQuery.data?.providers ?? []).filter((p) => p.configured).length,
       sealedPackets: roi?.sealedPackets ?? 0,
       intactSha256Chains: roi?.intactChains ?? 0,
+      latestMerkleRootHex: checkpoint?.rootHashHex ?? null,
     };
     await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
     setCopiedDiagnostics(true);
     toast.success('Verified system diagnostics JSON copied.');
     setTimeout(() => setCopiedDiagnostics(false), 2000);
+  };
+
+  const downloadCheckpointNote = () => {
+    if (!checkpoint) return;
+    const blob = new Blob([checkpoint.checkpointNote], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `auctum-c2sp-checkpoint-${checkpoint.rootHashHex.slice(0, 12)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
   return (
@@ -101,7 +142,7 @@ const SystemIntelligencePage: React.FC = () => {
             System &amp; Proof Audit
           </h1>
           <p className="text-text-secondary mt-1">
-            Live database connectivity, NOAA weather readiness, SHA-256 chain integrity &amp; field deployment downloads
+            Live database health, NOAA readiness, C2SP / RFC 9162 Merkle ledger checkpoints &amp; field app resources
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -163,6 +204,52 @@ const SystemIntelligencePage: React.FC = () => {
           hint="Cryptographically verified packets"
         />
       </div>
+
+      {/* C2SP / RFC 9162 Tamper-Evident Merkle Checkpoint Stamp */}
+      <Card
+        title="Cryptographic Witness Ledger Checkpoint (C2SP / RFC 9162)"
+        subtitle="Stamp a verifiable SHA-256 Merkle root across all sealed evidence packets, storm swaths, and payout entries"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Lock size={14} />}
+              isLoading={checkpointMutation.isPending}
+              onClick={() => checkpointMutation.mutate()}
+            >
+              Generate C2SP Audit Checkpoint
+            </Button>
+            {checkpoint && (
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<Download size={14} />}
+                onClick={downloadCheckpointNote}
+              >
+                Download Checkpoint Proof (.txt)
+              </Button>
+            )}
+          </div>
+
+          {checkpoint && (
+            <div className="space-y-2 rounded-lg border border-border bg-[hsl(var(--background-elevated))] p-4 font-mono text-xs">
+              <div className="flex flex-wrap justify-between gap-2 text-text-secondary">
+                <span>Format: {checkpoint.rfc}</span>
+                <span>Tree Size: {checkpoint.treeSize} leaves</span>
+                <span>Issued: {checkpoint.issuedAt}</span>
+              </div>
+              <div className="break-all text-emerald">
+                Merkle Root (SHA-256 hex): {checkpoint.rootHashHex}
+              </div>
+              <pre className="mt-2 whitespace-pre-wrap rounded border border-border bg-[hsl(var(--background))] p-3 text-text-primary">
+                {checkpoint.checkpointNote}
+              </pre>
+            </div>
+          )}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card title="Live Service Verification" subtitle="Real checks from /api/v1/health & /ai/status">

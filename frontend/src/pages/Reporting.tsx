@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import Card, { Badge, StatusDot } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { RevenueModelTab } from '../components/reports/RevenueModelTab';
+import { RevenueModelTab, buildScenarioSummaryCsv } from '../components/reports/RevenueModelTab';
 import {
   Calendar,
   ChevronDown,
@@ -873,6 +873,19 @@ const Reporting: React.FC = () => {
   // ─── Export handlers ────────────────────────────────────
 
   const handleExport = async (format: 'csv' | 'pdf') => {
+    if (activeTab === 'revenue-model' && format === 'csv') {
+      const blob = new Blob([buildScenarioSummaryCsv()], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'auctum_36m_pnl_scenarios_summary.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      return;
+    }
+
     const reportMap: Record<ReportTab, string> = {
       pipeline: 'pipeline',
       profitability: 'profitability',
